@@ -1,0 +1,151 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  height: 100%;
+  width: 100%;
+}
+
+body {
+  font-family: "Georgia", "Garamond", serif;
+  background: linear-gradient(135deg, #f3e8ff 0%, #fef3c7 100%);
+  color: #2d1b4e;
+}
+
+/* Salon theme colors */
+.salon-bg {
+  background: linear-gradient(135deg, #f3e8ff 0%, #e9d5ff 50%, #fef3c7 100%);
+}
+
+.salon-primary {
+  background-color: #c084fc;
+  color: white;
+}
+
+.salon-accent {
+  background-color: #d4af37;
+  color: #2d1b4e;
+}
+
+/* Elegant buttons */
+.btn-primary {
+  @apply px-6 py-2 rounded-lg font-semibold text-white transition-all;
+  background: linear-gradient(135deg, #c084fc 0%, #a855f7 100%);
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(192, 132, 252, 0.3);
+}
+
+.btn-secondary {
+  @apply px-6 py-2 rounded-lg font-semibold text-purple-900 border-2 border-purple-300 transition-all;
+  background: rgba(255, 255, 255, 0.8);
+}
+
+.btn-secondary:hover {
+  background: white;
+  border-color: #c084fc;
+}
+
+/* Cards */
+.card {
+  @apply rounded-xl shadow-lg transition-all p-6;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+}
+
+.card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 24px rgba(192, 132, 252, 0.2);
+}
+
+/* Headers */
+h1, h2, h3 {
+  color: #6b21a8;
+  font-weight: 600;
+}
+
+h1 {
+  font-size: 2.5rem;
+  margin-bottom: 1rem;
+}
+
+h2 {
+  font-size: 1.875rem;
+  margin-bottom: 0.75rem;
+}
+
+h3 {
+  font-size: 1.5rem;
+  margin-bottom: 0.5rem;
+}
+
+/* Forms */
+input, textarea, select {
+  @apply w-full px-4 py-3 border-2 border-purple-200 rounded-lg transition-all;
+  background: rgba(255, 255, 255, 0.9);
+  font-family: "Georgia", "Garamond", serif;
+}
+
+input:focus, textarea:focus, select:focus {
+  outline: none;
+  border-color: #c084fc;
+  box-shadow: 0 0 0 3px rgba(192, 132, 252, 0.1);
+}
+
+/* Navigation */
+nav {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+}
+
+nav a {
+  @apply px-4 py-2 rounded-lg transition-all;
+  color: #6b21a8;
+  font-weight: 500;
+}
+
+nav a:hover {
+  background: #f3e8ff;
+  color: #9333ea;
+}
+
+/* Status badges */
+.status-pending {
+  @apply px-3 py-1 rounded-full text-sm font-semibold;
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.status-confirmed {
+  @apply px-3 py-1 rounded-full text-sm font-semibold;
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.status-completed {
+  @apply px-3 py-1 rounded-full text-sm font-semibold;
+  background: #c7d2fe;
+  color: #312e81;
+}
+
+.status-cancelled {
+  @apply px-3 py-1 rounded-full text-sm font-semibold;
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.status-paid {
+  @apply px-3 py-1 rounded-full text-sm font-semibold;
+  background: #d1fae5;
+  color: #065f46;
+}
