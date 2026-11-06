@@ -1,7 +1,8 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import toast from "react-hot-toast";
-import { Booking, Order } from "../types";
+import { Booking, Order, RELEASED_STATUSES } from "../types";
+import { BookingStatusBadge } from "../components/BookingStatusBadge";
 import { authApi, bookingsApi, ordersApi } from "../services/api";
 import { ChangePasswordForm } from "../components/ChangePasswordForm";
 import { ScanToPayToggle } from "../components/ScanToPay";
@@ -92,45 +93,76 @@ export const AccountPage: React.FC = () => {
   };
 
   const now = new Date();
-  const upcoming = bookings.filter((b) => new Date(b.bookingDateTime) >= now && b.status !== "Cancelled");
+  const isReleased = (b: Booking) => RELEASED_STATUSES.includes(b.status);
+  const upcoming = bookings.filter((b) => new Date(b.bookingDateTime) >= now && !isReleased(b));
   const past = bookings.filter((b) => !upcoming.includes(b));
 
   const tabClass = (t: typeof tab) => (tab === t ? "chip-active" : "chip");
 
-  const renderBooking = (b: Booking, canCancel: boolean) => (
-    <div key={b.id} className="card">
-      <div className="flex flex-wrap justify-between gap-3">
-        <div>
-          <h3 className="text-2xl mb-0.5">{b.serviceName}</h3>
-          <p className="text-blush-900/70">
-            with {b.stylistName} ·{" "}
-            {new Date(b.bookingDateTime).toLocaleString([], { dateStyle: "full", timeStyle: "short" })}
+  const renderBooking = (b: Booking, canCancel: boolean) => {
+    const awaitingDeposit = b.status === "Awaiting Deposit";
+    return (
+      <div key={b.id} className="card">
+        <div className="flex flex-wrap justify-between gap-3">
+          <div>
+            <h3 className="text-2xl mb-0.5">{b.serviceName}</h3>
+            <p className="text-blush-900/70">
+              with {b.stylistName} ·{" "}
+              {new Date(b.bookingDateTime).toLocaleString([], { dateStyle: "full", timeStyle: "short" })}
+            </p>
+          </div>
+          <div className="text-right">
+            <p className="price">{formatRand(b.servicePrice)}</p>
+            <BookingStatusBadge booking={b} />
+          </div>
+        </div>
+
+        {awaitingDeposit && (
+          <div className="mt-4 rounded-xl px-4 py-3 bg-gold-50 border border-gold-300 text-sm">
+            <strong>Deposit of {formatRand(b.depositAmount)} due</strong> by{" "}
+            {new Date(b.depositDueAt).toLocaleString([], { dateStyle: "medium", timeStyle: "short" })} to secure this
+            booking. Unpaid bookings are released automatically.
+          </div>
+        )}
+        {b.depositPaid && !b.isPaid && !isReleased(b) && (
+          <p className="mt-3 text-sm text-blush-900/70">
+            Deposit received ({formatRand(b.amountPaid)}). Balance of <strong>{formatRand(b.balanceDue)}</strong> payable
+            at your appointment.
           </p>
-        </div>
-        <div className="text-right">
-          <p className="price">{formatRand(b.servicePrice)}</p>
-          <PaymentBadge isPaid={b.isPaid} cancelled={b.status === "Cancelled"} />
+        )}
+        {b.refundStatus !== "None" && (
+          <p className="mt-3 text-sm">
+            {b.refundStatus === "Refund Due" ? (
+              <span className="badge-pending">Refund of {formatRand(b.amountPaid)} on its way</span>
+            ) : (
+              <span className="badge-paid">Refunded {formatRand(b.amountPaid)}</span>
+            )}
+          </p>
+        )}
+
+        <div className="flex flex-wrap justify-between items-start gap-3 mt-4 pt-4 border-t border-gold-100">
+          <p className="text-sm">
+            Payment ref: <span className="font-mono font-bold text-blush-700">{b.paymentReference}</span>
+          </p>
+          {!isReleased(b) && awaitingDeposit && (
+            <ScanToPayToggle reference={b.paymentReference} amount={b.depositAmount} />
+          )}
+          {!isReleased(b) && !awaitingDeposit && b.balanceDue > 0 && canCancel && (
+            <ScanToPayToggle reference={b.paymentReference} amount={b.balanceDue} />
+          )}
+          {canCancel && !b.isPaid && (
+            <button
+              onClick={() => cancelBooking(b.id)}
+              disabled={cancellingId === b.id}
+              className="text-sm font-bold text-blush-600 hover:underline disabled:opacity-50"
+            >
+              Cancel appointment{b.depositPaid ? " (deposit refunded)" : ""}
+            </button>
+          )}
         </div>
       </div>
-      <div className="flex flex-wrap justify-between items-center gap-3 mt-4 pt-4 border-t border-gold-100">
-        <p className="text-sm">
-          Payment ref: <span className="font-mono font-bold text-blush-700">{b.paymentReference}</span>
-        </p>
-        {!b.isPaid && b.status !== "Cancelled" && (
-          <ScanToPayToggle reference={b.paymentReference} amount={b.servicePrice} />
-        )}
-        {canCancel && !b.isPaid && (
-          <button
-            onClick={() => cancelBooking(b.id)}
-            disabled={cancellingId === b.id}
-            className="text-sm font-bold text-blush-600 hover:underline disabled:opacity-50"
-          >
-            Cancel appointment
-          </button>
-        )}
-      </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <div className="py-12">

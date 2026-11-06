@@ -350,6 +350,7 @@ public class AuthService : IAuthService
         Phone = u.Phone,
         Role = u.Role,
         EmailConfirmed = u.EmailConfirmed,
+        StylistId = u.StylistId,
     };
 
     private static string Normalize(string? email) => (email ?? "").Trim().ToLowerInvariant();

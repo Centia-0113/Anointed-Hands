@@ -5,11 +5,29 @@ public class ServiceDto
     public int Id { get; set; }
     public string Name { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
-    public decimal Price { get; set; }
+    public decimal Price { get; set; }          // regular price
+    public decimal FinalPrice { get; set; }     // after any active discount
+    public int? DiscountPercent { get; set; }   // as configured (may be expired)
+    public DateTime? DiscountEndsOn { get; set; }
+    public bool IsDiscountActive { get; set; }
+    public decimal DepositAmount { get; set; }  // 10% of FinalPrice
     public int DurationMinutes { get; set; }
     public string Category { get; set; } = string.Empty;
     public string? ImageUrl { get; set; }
     public bool IsActive { get; set; }
+}
+
+/// <summary>Create/update a service (admin).</summary>
+public class SaveServiceDto
+{
+    public string Name { get; set; } = string.Empty;
+    public string? Description { get; set; }
+    public decimal Price { get; set; }
+    public int DurationMinutes { get; set; }
+    public string Category { get; set; } = string.Empty;
+    public int? DiscountPercent { get; set; }
+    public DateTime? DiscountEndsOn { get; set; }
+    public bool IsActive { get; set; } = true;
 }
 
 public class CafeItemDto
@@ -18,9 +36,26 @@ public class CafeItemDto
     public string Name { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
     public decimal Price { get; set; }
+    public decimal FinalPrice { get; set; }
+    public int? DiscountPercent { get; set; }
+    public DateTime? DiscountEndsOn { get; set; }
+    public bool IsDiscountActive { get; set; }
     public string Category { get; set; } = string.Empty;
     public string? ImageUrl { get; set; }
     public bool IsActive { get; set; }
+    public bool IsOutOfStock { get; set; }
+}
+
+/// <summary>Create/update a café menu item (admin).</summary>
+public class SaveCafeItemDto
+{
+    public string Name { get; set; } = string.Empty;
+    public string? Description { get; set; }
+    public decimal Price { get; set; }
+    public string Category { get; set; } = string.Empty;
+    public int? DiscountPercent { get; set; }
+    public DateTime? DiscountEndsOn { get; set; }
+    public bool IsActive { get; set; } = true;
     public bool IsOutOfStock { get; set; }
 }
 
@@ -33,6 +68,29 @@ public class StylistDto
     public bool IsActive { get; set; }
 }
 
+/// <summary>Stylist as seen by the admin, including contact details and login.</summary>
+public class StylistAdminDto : StylistDto
+{
+    public string Email { get; set; } = string.Empty;
+    public string? PhoneNumber { get; set; }
+    public string? LoginEmail { get; set; } // staff account linked to this stylist, if any
+}
+
+public class SaveStylistDto
+{
+    public string Name { get; set; } = string.Empty;
+    public string Specialization { get; set; } = string.Empty;
+    public string? Email { get; set; }
+    public string? PhoneNumber { get; set; }
+    public bool IsActive { get; set; } = true;
+}
+
+public class CreateStaffAccountDto
+{
+    public string Email { get; set; } = string.Empty;
+    public string Password { get; set; } = string.Empty;
+}
+
 public class BookingDto
 {
     public int Id { get; set; }
@@ -41,15 +99,32 @@ public class BookingDto
     public string? CustomerPhone { get; set; }
     public int ServiceId { get; set; }
     public string ServiceName { get; set; } = string.Empty;
-    public decimal ServicePrice { get; set; }
+    public decimal ServicePrice { get; set; } // price charged for this booking
+    public int DurationMinutes { get; set; }
     public int StylistId { get; set; }
     public string StylistName { get; set; } = string.Empty;
     public DateTime BookingDateTime { get; set; }
     public string Status { get; set; } = string.Empty;
     public string PaymentReference { get; set; } = string.Empty;
-    public bool IsPaid { get; set; }
+    public bool IsPaid { get; set; } // paid in full
     public string? Notes { get; set; }
     public DateTime CreatedAt { get; set; }
+
+    public decimal DepositAmount { get; set; }
+    public DateTime DepositDueAt { get; set; }
+    public bool DepositPaid { get; set; }
+    public DateTime? DepositPaidAt { get; set; }
+    public DateTime? FullyPaidAt { get; set; }
+    public decimal AmountPaid { get; set; }
+    public decimal BalanceDue { get; set; }
+    public string RefundStatus { get; set; } = string.Empty;
+    public DateTime? RefundedAt { get; set; }
+    public DateTime? CancelledAt { get; set; }
+}
+
+public class UpdateBookingStatusDto
+{
+    public string Status { get; set; } = string.Empty;
 }
 
 public class CreateBookingDto
@@ -128,6 +203,7 @@ public class UserDto
     public string? Phone { get; set; }
     public string Role { get; set; } = string.Empty;
     public bool EmailConfirmed { get; set; }
+    public int? StylistId { get; set; }
 }
 
 public class AuthResponseDto

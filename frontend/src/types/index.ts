@@ -3,6 +3,11 @@ export interface Service {
   name: string;
   description: string;
   price: number;
+  finalPrice: number;
+  discountPercent?: number | null;
+  discountEndsOn?: string | null;
+  isDiscountActive: boolean;
+  depositAmount: number;
   durationMinutes: number;
   category: string;
   imageUrl?: string;
@@ -14,6 +19,10 @@ export interface CafeItem {
   name: string;
   description: string;
   price: number;
+  finalPrice: number;
+  discountPercent?: number | null;
+  discountEndsOn?: string | null;
+  isDiscountActive: boolean;
   category: string;
   imageUrl?: string;
   isActive: boolean;
@@ -36,6 +45,7 @@ export interface Booking {
   serviceId: number;
   serviceName: string;
   servicePrice: number;
+  durationMinutes: number;
   stylistId: number;
   stylistName: string;
   bookingDateTime: string;
@@ -44,7 +54,20 @@ export interface Booking {
   isPaid: boolean;
   notes?: string;
   createdAt: string;
+  depositAmount: number;
+  depositDueAt: string;
+  depositPaid: boolean;
+  depositPaidAt?: string | null;
+  fullyPaidAt?: string | null;
+  amountPaid: number;
+  balanceDue: number;
+  refundStatus: "None" | "Refund Due" | "Refunded";
+  refundedAt?: string | null;
+  cancelledAt?: string | null;
 }
+
+export type BookingStatus = "Awaiting Deposit" | "Confirmed" | "Completed" | "No Show" | "Cancelled" | "Expired";
+export const RELEASED_STATUSES = ["Cancelled", "Expired"];
 
 export interface CreateBookingRequest {
   customerName: string;
@@ -92,8 +115,9 @@ export interface User {
   name: string;
   email: string;
   phone?: string;
-  role: "Admin" | "Customer";
+  role: "Admin" | "Customer" | "Stylist";
   emailConfirmed: boolean;
+  stylistId?: number | null;
 }
 
 export interface AuthResponse {
@@ -154,4 +178,63 @@ export interface PaymentInfo {
   accountNumber: string;
   branchCode: string;
   scanToPayUrlTemplate?: string | null;
+}
+
+export interface StylistAdmin extends Stylist {
+  email: string;
+  phoneNumber?: string | null;
+  loginEmail?: string | null;
+}
+
+export interface SaveService {
+  name: string;
+  description?: string;
+  price: number;
+  durationMinutes: number;
+  category: string;
+  discountPercent?: number | null;
+  discountEndsOn?: string | null;
+  isActive: boolean;
+}
+
+export interface SaveCafeItem {
+  name: string;
+  description?: string;
+  price: number;
+  category: string;
+  discountPercent?: number | null;
+  discountEndsOn?: string | null;
+  isActive: boolean;
+  isOutOfStock: boolean;
+}
+
+export interface DayHours {
+  date: string;
+  isOpen: boolean;
+  opens?: string | null;
+  closes?: string | null;
+  isSpecial: boolean;
+  note?: string | null;
+}
+
+export interface SpecialDay {
+  id: number;
+  date: string;
+  isClosed: boolean;
+  opens?: string | null;
+  closes?: string | null;
+  note?: string | null;
+}
+
+export interface StaffClient {
+  name: string;
+  email: string;
+  phone?: string | null;
+  totalBookings: number;
+  completedVisits: number;
+  noShows: number;
+  lastVisit?: string | null;
+  nextAppointment?: string | null;
+  totalSpent: number;
+  bookings: Booking[];
 }

@@ -4,6 +4,7 @@ public static class Roles
 {
     public const string Admin = "Admin";
     public const string Customer = "Customer";
+    public const string Stylist = "Stylist"; // salon employee: sees their own appointments and clients
 }
 
 public class User
@@ -15,6 +16,9 @@ public class User
     public string PasswordHash { get; set; } = string.Empty;
     public string Role { get; set; } = Roles.Customer;
     public bool EmailConfirmed { get; set; }
+
+    /// <summary>For staff accounts: the stylist profile this login belongs to.</summary>
+    public int? StylistId { get; set; }
 
     /// <summary>Bumped on password change/reset; sign-in tokens carrying an older value are rejected.</summary>
     public int TokenVersion { get; set; }

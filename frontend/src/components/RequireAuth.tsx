@@ -5,8 +5,11 @@ import { useAuth } from "../context/AuthContext";
 interface Props {
   children: React.ReactElement;
   /** When set, only users with this role may see the page. */
-  role?: "Admin";
+  role?: "Admin" | "Stylist";
 }
+
+/** Where each kind of user lands after signing in. */
+export const homeFor = (role: string) => (role === "Admin" ? "/admin" : role === "Stylist" ? "/staff" : "/account");
 
 /**
  * Guards a route. Signed-out visitors are sent to /login (and returned afterwards);
@@ -30,12 +33,13 @@ export const RequireAuth: React.FC<Props> = ({ children, role }) => {
       <div className="py-24 px-4">
         <div className="max-w-md mx-auto card text-center">
           <div className="text-5xl mb-3">🔒</div>
-          <h1 className="text-3xl mb-2">Admins only</h1>
+          <h1 className="text-3xl mb-2">{role === "Admin" ? "Admins only" : "Staff only"}</h1>
           <p className="text-blush-900/70 mb-6">
-            This area is for salon staff. You can view your own bookings and orders in your account.
+            This area is for salon staff.{" "}
+            {user.role === "Customer" ? "You can view your own bookings and orders in your account." : ""}
           </p>
-          <Link to="/account" className="btn-primary">
-            Go to My Account
+          <Link to={homeFor(user.role)} className="btn-primary">
+            Go to {user.role === "Stylist" ? "My Schedule" : user.role === "Admin" ? "Dashboard" : "My Account"}
           </Link>
         </div>
       </div>

@@ -132,6 +132,23 @@ dotnet user-secrets set "Smtp:From" "you@gmail.com"
   ordering for that browser tab for 4 hours. *Change Code* invalidates old signs.
 - **Facials** include eyebrow shaping, brow tint & shape, classic lash extensions and lash lift & tint.
 
+## 🧾 Management, Deposits & Staff
+
+- **Services & Menu** (*Admin → Services & Menu*) - add, edit and hide services and cafe items, change prices and durations,
+  mark items out of stock, and set a discount (% off, optional end date). Discounted prices show crossed out on the site;
+  bookings and orders are charged the discounted price, and existing bookings keep the price they were booked at.
+- **Opening hours** (*Admin → Opening Hours*) - open a Sunday with custom hours, close a day (e.g. public holiday) or change one
+  day's hours. Days with active bookings can't be closed.
+- **10% refundable deposit** - every booking starts as *Awaiting Deposit*: 10% of the price (rounded up to the rand), due within
+  24 hours (or before the appointment if sooner), with a scan-to-pay QR. A background job releases unpaid bookings (*Expired*) every
+  5 minutes and emails the client. The admin marks *Deposit Paid* / *Paid in Full*; cancelling after payment marks a *Refund Due*,
+  then *Mark Refunded*. The balance is paid at the appointment (scan-to-pay available in *My Bookings*).
+- **Staff** (*Admin → Staff*) - add stylists and give each a login. Stylists sign in to **My Schedule** (`/staff`) to see only
+  their own appointments (client phone, email, notes, payment status), mark visits *Completed* / *No Show*, and browse
+  **My Clients** with visit history, next appointment and total spent.
+
+> Appointment times and deposit deadlines use the server's local time zone - run the API in South African time (SAST).
+
 ## 🌐 API Endpoints
 
 ### Auth

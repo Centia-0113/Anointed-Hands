@@ -6,8 +6,11 @@ import { apiErrorMessage, formatRand } from "../utils/format";
 import { ChangePasswordForm } from "../components/ChangePasswordForm";
 import { useAuth } from "../context/AuthContext";
 import { AdminGallery, AdminReports, AdminReviews, AdminSalonQr } from "../components/AdminPanels";
+import { AdminCatalog, AdminHours, AdminStaff } from "../components/AdminManage";
+import { BookingStatusBadge } from "../components/BookingStatusBadge";
+import { RELEASED_STATUSES } from "../types";
 
-type Tab = "bookings" | "orders" | "reports" | "reviews" | "gallery" | "cafe-qr";
+type Tab = "bookings" | "orders" | "catalog" | "staff" | "hours" | "reports" | "reviews" | "gallery" | "cafe-qr";
 
 const ORDER_STATUSES = ["Received", "Preparing", "Ready", "Completed", "Cancelled"];
 
@@ -75,7 +78,9 @@ export const AdminDashboard: React.FC = () => {
   };
 
   const handleCancelBooking = async (id: number) => {
-    if (!window.confirm("Cancel this booking?")) return;
+    const b = bookings.find((x) => x.id === id);
+    const note = b && b.amountPaid > 0 ? ` The ${formatRand(b.amountPaid)} received will be marked as a refund due.` : "";
+    if (!window.confirm(`Cancel this booking?${note}`)) return;
     setBusyId(`booking-${id}`);
     try {
       await bookingsApi.cancel(id);
@@ -83,6 +88,20 @@ export const AdminDashboard: React.FC = () => {
       await fetchData();
     } catch (error) {
       toast.error(apiErrorMessage(error, "Failed to cancel booking"));
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const bookingAction = async (id: number, action: () => Promise<void>, success: string, confirmText?: string) => {
+    if (confirmText && !window.confirm(confirmText)) return;
+    setBusyId(`booking-${id}`);
+    try {
+      await action();
+      toast.success(success);
+      await fetchData();
+    } catch (error) {
+      toast.error(apiErrorMessage(error, "Couldn't update the booking"));
     } finally {
       setBusyId(null);
     }
@@ -108,13 +127,19 @@ export const AdminDashboard: React.FC = () => {
   const filteredBookings = bookings.filter((b) => matches(b.customerName, b.paymentReference));
   const filteredOrders = orders.filter((o) => matches(o.customerName, o.paymentReference, o.orderNumber));
 
-  const unpaidBookings = bookings.filter((b) => !b.isPaid && b.status !== "Cancelled").length;
+  const awaitingDeposits = bookings.filter((b) => b.status === "Awaiting Deposit").length;
+  const refundsDue = bookings.filter((b) => b.refundStatus === "Refund Due").length;
   const unpaidOrders = orders.filter((o) => !o.isPaid && o.status !== "Cancelled").length;
+  // Money received today: café orders, deposits and balances, less refunds paid out
   const todaysRevenue =
     orders.filter((o) => o.isPaid && isToday(o.createdAt)).reduce((sum, o) => sum + o.totalAmount, 0) +
-    bookings
-      .filter((b) => b.isPaid && isToday(b.bookingDateTime))
-      .reduce((sum, b) => sum + b.servicePrice, 0);
+    bookings.reduce((sum, b) => {
+      let total = sum;
+      if (b.depositPaidAt && isToday(b.depositPaidAt)) total += Math.min(b.depositAmount, b.servicePrice);
+      if (b.fullyPaidAt && isToday(b.fullyPaidAt)) total += b.servicePrice - Math.min(b.depositAmount, b.servicePrice);
+      if (b.refundedAt && isToday(b.refundedAt)) total -= b.amountPaid;
+      return total;
+    }, 0);
 
   const tabClass = (tab: Tab) =>
     activeTab === tab
@@ -150,10 +175,10 @@ export const AdminDashboard: React.FC = () => {
         )}
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 mb-10">
-          <StatCard label="Unpaid Bookings" value={unpaidBookings} tone="rose" />
+          <StatCard label="Awaiting Deposit" value={awaitingDeposits} tone="rose" />
+          <StatCard label="Refunds Due" value={refundsDue} tone="plum" />
           <StatCard label="Unpaid Orders" value={unpaidOrders} tone="blush" />
-          <StatCard label="Today's Revenue" value={formatRand(todaysRevenue)} tone="gold" />
-          <StatCard label="Total Transactions" value={bookings.length + orders.length} tone="plum" />
+          <StatCard label="Today's Takings" value={formatRand(todaysRevenue)} tone="gold" />
         </div>
 
         <div className="flex flex-wrap gap-2 mb-6">
@@ -162,6 +187,15 @@ export const AdminDashboard: React.FC = () => {
           </button>
           <button onClick={() => setActiveTab("orders")} className={tabClass("orders")}>
             Orders ({orders.length})
+          </button>
+          <button onClick={() => setActiveTab("catalog")} className={tabClass("catalog")}>
+            Services &amp; Menu
+          </button>
+          <button onClick={() => setActiveTab("staff")} className={tabClass("staff")}>
+            Staff
+          </button>
+          <button onClick={() => setActiveTab("hours")} className={tabClass("hours")}>
+            Opening Hours
           </button>
           <button onClick={() => setActiveTab("reports")} className={tabClass("reports")}>
             Concerns &amp; Lost Items{openReports ? ` (${openReports})` : ""}
@@ -181,6 +215,9 @@ export const AdminDashboard: React.FC = () => {
         <div className={activeTab === "reports" ? "" : "hidden"}>
           <AdminReports onCountChange={setOpenReports} />
         </div>
+        {activeTab === "catalog" && <AdminCatalog />}
+        {activeTab === "staff" && <AdminStaff />}
+        {activeTab === "hours" && <AdminHours />}
         {activeTab === "reviews" && <AdminReviews />}
         {activeTab === "gallery" && <AdminGallery />}
         {activeTab === "cafe-qr" && <AdminSalonQr />}
@@ -206,7 +243,7 @@ export const AdminDashboard: React.FC = () => {
                   <th className={th}>Service</th>
                   <th className={th}>Date / Time</th>
                   <th className={th}>Payment Ref</th>
-                  <th className={th}>Status</th>
+                  <th className={th}>Status &amp; Deposit</th>
                   <th className={th}>Actions</th>
                 </tr>
               </thead>
@@ -238,33 +275,62 @@ export const AdminDashboard: React.FC = () => {
                     </td>
                     <td className={`${td} font-mono text-gold-200`}>{b.paymentReference}</td>
                     <td className={td}>
-                      {b.status === "Cancelled" ? (
-                        <span className="badge-cancelled">Cancelled</span>
-                      ) : b.isPaid ? (
-                        <span className="badge-paid">Paid</span>
-                      ) : (
-                        <span className="badge-pending">Pending</span>
+                      <BookingStatusBadge booking={b} />
+                      <p className="text-xs text-blush-200/80 mt-1">
+                        {b.depositPaid
+                          ? `Deposit ${formatRand(b.depositAmount)} ✓ · paid ${formatRand(b.amountPaid)}`
+                          : b.status === "Awaiting Deposit"
+                          ? `Deposit ${formatRand(b.depositAmount)} due ${new Date(b.depositDueAt).toLocaleString([], { dateStyle: "short", timeStyle: "short" })}`
+                          : `Deposit ${formatRand(b.depositAmount)} not paid`}
+                      </p>
+                      {b.refundStatus !== "None" && (
+                        <p className={`text-xs font-bold mt-0.5 ${b.refundStatus === "Refund Due" ? "text-gold-300" : "text-emerald-300"}`}>
+                          {b.refundStatus} · {formatRand(b.amountPaid)}
+                        </p>
                       )}
                     </td>
-                    <td className={`${td} whitespace-nowrap space-x-2`}>
-                      {!b.isPaid && b.status !== "Cancelled" && (
-                        <button
-                          onClick={() => handleMarkPaid(b.id, "booking", b.paymentReference)}
-                          disabled={busyId === `booking-${b.id}`}
-                          className="btn-gold text-xs px-3 py-1.5 disabled:opacity-50"
-                        >
-                          Mark Paid
-                        </button>
-                      )}
-                      {b.status !== "Cancelled" && (
-                        <button
-                          onClick={() => handleCancelBooking(b.id)}
-                          disabled={busyId === `booking-${b.id}`}
-                          className="text-xs font-bold text-blush-300 hover:text-white disabled:opacity-50"
-                        >
-                          Cancel
-                        </button>
-                      )}
+                    <td className={`${td} whitespace-nowrap`}>
+                      <div className="flex flex-wrap gap-2 items-center">
+                        {!b.depositPaid && (b.status === "Awaiting Deposit" || b.status === "Expired") && (
+                          <button
+                            onClick={() => bookingAction(b.id, () => bookingsApi.markDepositPaid(b.id), "Deposit recorded – booking secured")}
+                            disabled={busyId === `booking-${b.id}`}
+                            className="btn-gold text-xs px-3 py-1.5 disabled:opacity-50"
+                          >
+                            Deposit Paid
+                          </button>
+                        )}
+                        {!b.isPaid && !RELEASED_STATUSES.includes(b.status) && (
+                          <button
+                            onClick={() => handleMarkPaid(b.id, "booking", b.paymentReference)}
+                            disabled={busyId === `booking-${b.id}`}
+                            className="px-3 py-1.5 rounded-full text-xs font-bold border border-gold-400 text-gold-200 hover:bg-white/10 disabled:opacity-50"
+                          >
+                            Paid in Full
+                          </button>
+                        )}
+                        {b.refundStatus === "Refund Due" && (
+                          <button
+                            onClick={() =>
+                              bookingAction(b.id, () => bookingsApi.markRefunded(b.id), "Refund recorded",
+                                `Confirm you've refunded ${formatRand(b.amountPaid)} to ${b.customerName}?`)
+                            }
+                            disabled={busyId === `booking-${b.id}`}
+                            className="btn-gold text-xs px-3 py-1.5 disabled:opacity-50"
+                          >
+                            Mark Refunded
+                          </button>
+                        )}
+                        {!RELEASED_STATUSES.includes(b.status) && b.status !== "Completed" && (
+                          <button
+                            onClick={() => handleCancelBooking(b.id)}
+                            disabled={busyId === `booking-${b.id}`}
+                            className="text-xs font-bold text-blush-300 hover:text-white disabled:opacity-50"
+                          >
+                            Cancel
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}

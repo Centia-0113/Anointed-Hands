@@ -23,6 +23,7 @@ public class AnoitedHandsDbContext : DbContext
     public DbSet<Review> Reviews { get; set; }
     public DbSet<SupportReport> SupportReports { get; set; }
     public DbSet<AppSetting> AppSettings { get; set; }
+    public DbSet<SpecialDay> SpecialDays { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -46,6 +47,10 @@ public class AnoitedHandsDbContext : DbContext
             .OnDelete(DeleteBehavior.Cascade);
 
         modelBuilder.Entity<AppSetting>().HasKey(s => s.Key);
+        modelBuilder.Entity<SpecialDay>().HasIndex(d => d.Date).IsUnique();
+        modelBuilder.Entity<Booking>().HasIndex(b => new { b.Status, b.DepositDueAt });
+        modelBuilder.Entity<Booking>().HasIndex(b => new { b.StylistId, b.BookingDateTime });
+        modelBuilder.Entity<User>().HasIndex(u => u.StylistId);
         modelBuilder.Entity<Review>().HasIndex(r => new { r.UserId, r.ServiceId });
         modelBuilder.Entity<Review>()
             .HasOne(r => r.User).WithMany().HasForeignKey(r => r.UserId).OnDelete(DeleteBehavior.Cascade);

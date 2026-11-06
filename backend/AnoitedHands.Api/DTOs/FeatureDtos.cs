@@ -91,3 +91,47 @@ public class SalonCodeDto
 {
     public string Code { get; set; } = string.Empty;
 }
+
+public class DayHoursDto
+{
+    public string Date { get; set; } = string.Empty; // yyyy-MM-dd
+    public bool IsOpen { get; set; }
+    public string? Opens { get; set; }  // HH:mm
+    public string? Closes { get; set; }
+    public bool IsSpecial { get; set; }
+    public string? Note { get; set; }
+}
+
+public class SpecialDayDto
+{
+    public int Id { get; set; }
+    public string Date { get; set; } = string.Empty;
+    public bool IsClosed { get; set; }
+    public string? Opens { get; set; }
+    public string? Closes { get; set; }
+    public string? Note { get; set; }
+}
+
+public class SaveSpecialDayDto
+{
+    public DateTime Date { get; set; }
+    public bool IsClosed { get; set; }
+    public string? Opens { get; set; }  // "10:00"
+    public string? Closes { get; set; } // "14:00"
+    public string? Note { get; set; }
+}
+
+/// <summary>A client as seen by their stylist: contact details plus visit history with that stylist.</summary>
+public class StaffClientDto
+{
+    public string Name { get; set; } = string.Empty;
+    public string Email { get; set; } = string.Empty;
+    public string? Phone { get; set; }
+    public int TotalBookings { get; set; }
+    public int CompletedVisits { get; set; }
+    public int NoShows { get; set; }
+    public DateTime? LastVisit { get; set; }
+    public DateTime? NextAppointment { get; set; }
+    public decimal TotalSpent { get; set; }
+    public List<BookingDto> Bookings { get; set; } = new();
+}

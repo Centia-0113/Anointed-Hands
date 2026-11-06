@@ -14,6 +14,12 @@ import {
   ReviewSummary,
   SupportReport,
   PaymentInfo,
+  StylistAdmin,
+  SaveService,
+  SaveCafeItem,
+  DayHours,
+  SpecialDay,
+  StaffClient,
 } from "../types";
 
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000/api";
@@ -101,6 +107,9 @@ export const authApi = {
 
 // Services API
 export const servicesApi = {
+  getAllAdmin: async (): Promise<Service[]> => (await api.get("/services/all")).data,
+  create: async (data: SaveService): Promise<Service> => (await api.post("/services", data)).data,
+  update: async (id: number, data: SaveService): Promise<Service> => (await api.put(`/services/${id}`, data)).data,
   getAll: async (): Promise<Service[]> => {
     const response = await api.get("/services");
     return response.data;
@@ -113,6 +122,9 @@ export const servicesApi = {
 
 // Cafe Items API
 export const cafeItemsApi = {
+  getAllAdmin: async (): Promise<CafeItem[]> => (await api.get("/cafeitems/all")).data,
+  create: async (data: SaveCafeItem): Promise<CafeItem> => (await api.post("/cafeitems", data)).data,
+  update: async (id: number, data: SaveCafeItem): Promise<CafeItem> => (await api.put(`/cafeitems/${id}`, data)).data,
   getAll: async (): Promise<CafeItem[]> => {
     const response = await api.get("/cafeitems");
     return response.data;
@@ -125,6 +137,16 @@ export const cafeItemsApi = {
 
 // Stylists API
 export const stylistsApi = {
+  getAllAdmin: async (): Promise<StylistAdmin[]> => (await api.get("/stylists/all")).data,
+  create: async (data: { name: string; specialization: string; email?: string; phoneNumber?: string; isActive: boolean }): Promise<StylistAdmin> =>
+    (await api.post("/stylists", data)).data,
+  update: async (id: number, data: { name: string; specialization: string; email?: string; phoneNumber?: string; isActive: boolean }): Promise<StylistAdmin> =>
+    (await api.put(`/stylists/${id}`, data)).data,
+  createAccount: async (id: number, email: string, password: string): Promise<{ message: string }> =>
+    (await api.post(`/stylists/${id}/account`, { email, password })).data,
+  removeAccount: async (id: number): Promise<void> => {
+    await api.delete(`/stylists/${id}/account`);
+  },
   getAll: async (): Promise<Stylist[]> => {
     const response = await api.get("/stylists");
     return response.data;
@@ -171,6 +193,15 @@ export const bookingsApi = {
   },
   cancel: async (id: number): Promise<void> => {
     await api.post(`/bookings/${id}/cancel`);
+  },
+  markDepositPaid: async (id: number): Promise<void> => {
+    await api.post(`/bookings/${id}/deposit-paid`);
+  },
+  markRefunded: async (id: number): Promise<void> => {
+    await api.post(`/bookings/${id}/refunded`);
+  },
+  updateStatus: async (id: number, status: string): Promise<void> => {
+    await api.put(`/bookings/${id}/status`, { status });
   },
 };
 
@@ -261,6 +292,23 @@ export const settingsApi = {
     (await api.post("/settings/salon-code/regenerate")).data.code,
   checkSalonCode: async (code: string): Promise<boolean> =>
     (await api.post("/settings/salon-code/check", { code })).data.valid,
+};
+
+// Opening hours & special days
+export const scheduleApi = {
+  getDay: async (date: string): Promise<DayHours> => (await api.get("/schedule/day", { params: { date } })).data,
+  getSpecialDays: async (): Promise<SpecialDay[]> => (await api.get("/schedule/special-days")).data,
+  save: async (data: { date: string; isClosed: boolean; opens?: string; closes?: string; note?: string }): Promise<SpecialDay> =>
+    (await api.post("/schedule/special-days", data)).data,
+  remove: async (id: number): Promise<void> => {
+    await api.delete(`/schedule/special-days/${id}`);
+  },
+};
+
+// Staff (stylist) views
+export const staffApi = {
+  getBookings: async (): Promise<Booking[]> => (await api.get("/staff/bookings")).data,
+  getClients: async (): Promise<StaffClient[]> => (await api.get("/staff/clients")).data,
 };
 
 export default api;

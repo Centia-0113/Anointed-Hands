@@ -17,6 +17,7 @@ import { ForgotPasswordPage, ResetPasswordPage, VerifyEmailPage } from "./pages/
 import { GalleryPage } from "./pages/GalleryPage";
 import { ReviewsPage } from "./pages/ReviewsPage";
 import { HelpPage } from "./pages/HelpPage";
+import { StaffPage } from "./pages/StaffPage";
 
 // Auth
 import { AuthProvider } from "./context/AuthContext";
@@ -53,6 +54,14 @@ function App() {
               element={
                 <RequireAuth>
                   <AccountPage />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/staff"
+              element={
+                <RequireAuth role="Stylist">
+                  <StaffPage />
                 </RequireAuth>
               }
             />

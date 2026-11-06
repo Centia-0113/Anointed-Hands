@@ -68,3 +68,16 @@ public class AppSetting
     public string Key { get; set; } = string.Empty;
     public string Value { get; set; } = string.Empty;
 }
+
+/// <summary>
+/// A date with non-standard hours: a special Sunday opening, a public-holiday closure, or shorter hours.
+/// </summary>
+public class SpecialDay
+{
+    public int Id { get; set; }
+    public DateTime Date { get; set; } // date only
+    public bool IsClosed { get; set; }
+    public TimeSpan? OpensAt { get; set; }
+    public TimeSpan? ClosesAt { get; set; }
+    public string? Note { get; set; } // e.g. "Festive season Sunday"
+}

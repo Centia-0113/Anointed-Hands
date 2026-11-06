@@ -8,6 +8,8 @@ import { ScanToPay } from "../components/ScanToPay";
 import toast from "react-hot-toast";
 import { apiErrorMessage, formatRand } from "../utils/format";
 import { categoryEmoji } from "./CafePage";
+import { Price } from "../components/Price";
+
 
 // The in-salon code is kept for this browser tab only, for a few hours (i.e. while at the salon)
 const SALON_CODE_KEY = "ah_salon_code";
@@ -121,7 +123,7 @@ export const OrderPage: React.FC = () => {
           c.cafeItemId === item.id ? { ...c, quantity: c.quantity + 1 } : c
         );
       }
-      return [...prev, { cafeItemId: item.id, name: item.name, price: item.price, quantity: 1 }];
+      return [...prev, { cafeItemId: item.id, name: item.name, price: item.finalPrice, quantity: 1 }];
     });
     toast.success(`${item.name} added`);
   };
@@ -303,9 +305,14 @@ export const OrderPage: React.FC = () => {
                     <h3 className="text-xl mb-0.5">{item.name}</h3>
                     <p className="text-sm text-blush-900/70 mb-3">{item.description}</p>
                     <div className="flex justify-between items-center">
-                      <p className="font-elegant text-xl font-bold text-blush-600">
-                        {formatRand(item.price)}
-                      </p>
+                      <Price
+                        className="font-elegant text-xl font-bold text-blush-600"
+                        price={item.price}
+                        finalPrice={item.finalPrice}
+                        discountPercent={item.discountPercent}
+                        isDiscountActive={item.isDiscountActive}
+                        discountEndsOn={item.discountEndsOn}
+                      />
                       <button
                         type="button"
                         onClick={() => addToCart(item)}

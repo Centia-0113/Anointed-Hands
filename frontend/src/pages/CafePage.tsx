@@ -2,7 +2,9 @@ import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { CafeItem } from "../types";
 import { cafeItemsApi } from "../services/api";
-import { apiErrorMessage, formatRand } from "../utils/format";
+import { apiErrorMessage } from "../utils/format";
+import { Price } from "../components/Price";
+
 
 export const categoryEmoji: Record<string, string> = {
   Cakes: "🍰",
@@ -75,7 +77,13 @@ export const CafePage: React.FC = () => {
                 <h3 className="text-2xl mb-1">{item.name}</h3>
                 <p className="text-blush-900/70 mb-5 flex-1">{item.description}</p>
                 <div className="flex justify-between items-center">
-                  <p className="price">{formatRand(item.price)}</p>
+                  <Price
+                    price={item.price}
+                    finalPrice={item.finalPrice}
+                    discountPercent={item.discountPercent}
+                    isDiscountActive={item.isDiscountActive}
+                    discountEndsOn={item.discountEndsOn}
+                  />
                   {item.isOutOfStock ? (
                     <span className="badge-cancelled">Out of Stock</span>
                   ) : (

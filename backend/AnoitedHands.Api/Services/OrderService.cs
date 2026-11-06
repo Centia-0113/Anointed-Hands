@@ -44,11 +44,11 @@ public class OrderService : IOrderService
             {
                 CafeItemId = item.CafeItemId,
                 Quantity = item.Quantity,
-                Price = cafeItem.Price,
+                Price = Pricing.Effective(cafeItem.Price, cafeItem.DiscountPercent, cafeItem.DiscountEndsOn),
                 CafeItem = cafeItem
             };
             orderItems.Add(orderItem);
-            totalAmount += cafeItem.Price * item.Quantity;
+            totalAmount += orderItem.Price * item.Quantity;
         }
 
         if (orderItems.Count == 0)

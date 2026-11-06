@@ -33,6 +33,8 @@ builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IEmailSender, EmailSender>();
 builder.Services.AddScoped<ISalonCodeService, SalonCodeService>();
+builder.Services.AddScoped<IScheduleService, ScheduleService>();
+builder.Services.AddHostedService<DepositExpiryService>(); // releases bookings with unpaid deposits
 
 // Rate limiting: sign-in / registration / reset endpoints, per client IP
 builder.Services.AddRateLimiter(options =>

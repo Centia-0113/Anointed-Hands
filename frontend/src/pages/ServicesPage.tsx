@@ -3,6 +3,8 @@ import { Link } from "react-router-dom";
 import { Service } from "../types";
 import { servicesApi } from "../services/api";
 import { apiErrorMessage, formatRand } from "../utils/format";
+import { Price } from "../components/Price";
+
 
 const categoryIcon: Record<string, string> = {
   Hair: "💇🏾‍♀️",
@@ -73,9 +75,15 @@ export const ServicesPage: React.FC = () => {
                 <p className="text-blush-900/70 mb-5 flex-1">{service.description}</p>
                 <div className="flex justify-between items-end">
                   <div>
-                    <p className="price">{formatRand(service.price)}</p>
+                    <Price
+                      price={service.price}
+                      finalPrice={service.finalPrice}
+                      discountPercent={service.discountPercent}
+                      isDiscountActive={service.isDiscountActive}
+                      discountEndsOn={service.discountEndsOn}
+                    />
                     <p className="text-sm text-gold-700 font-bold">
-                      {service.durationMinutes} mins
+                      {service.durationMinutes} mins · {formatRand(service.depositAmount)} deposit
                     </p>
                   </div>
                   <Link

@@ -31,6 +31,8 @@ export const Header: React.FC<HeaderProps> = ({
     ? [{ to: "/login", label: "Sign In" }]
     : isAdmin
     ? [{ to: "/admin", label: "Admin" }]
+    : user.role === "Stylist"
+    ? [{ to: "/staff", label: "My Schedule" }]
     : [{ to: "/account", label: "My Bookings" }];
   const allLinks = [...links, ...accountLinks];
 
@@ -133,7 +135,7 @@ export const Footer: React.FC = () => {
             <h3 className="text-xl mb-3 text-gold-300">Hours</h3>
             <p className="text-blush-200 text-sm">Mon – Fri: 9AM – 6PM</p>
             <p className="text-blush-200 text-sm">Sat: 10AM – 5PM</p>
-            <p className="text-blush-200 text-sm">Sun: Closed</p>
+            <p className="text-blush-200 text-sm">Sun: Closed (special openings announced)</p>
           </div>
           <div>
             <h3 className="text-xl mb-3 text-gold-300">Contact</h3>

@@ -74,9 +74,9 @@ public class ReviewsController : ControllerBase
         var user = await _context.Users.FindAsync(userId);
         if (user == null) return Unauthorized();
 
-        // Verified = they have a paid booking (for this service, if one was chosen)
+        // Verified = they have a paid or completed booking (for this service, if one was chosen)
         var email = user.EmailConfirmed ? user.Email : null;
-        var paid = _context.Bookings.Where(b => b.IsPaid &&
+        var paid = _context.Bookings.Where(b => (b.IsPaid || b.Status == BookingStatuses.Completed) &&
             (b.UserId == userId || (email != null && b.UserId == null && b.CustomerEmail.ToLower() == email)));
         if (dto.ServiceId != null) paid = paid.Where(b => b.ServiceId == dto.ServiceId);
         var verified = await paid.AnyAsync();

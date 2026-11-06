@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import { useAuth } from "../context/AuthContext";
+import { homeFor } from "../components/RequireAuth";
 import { apiErrorMessage } from "../utils/format";
 
 export const LoginPage: React.FC = () => {
@@ -16,7 +17,7 @@ export const LoginPage: React.FC = () => {
   const update = (patch: Partial<typeof form>) => setForm((f) => ({ ...f, ...patch }));
 
   if (user) {
-    return <Navigate to={user.role === "Admin" ? "/admin" : from ?? "/account"} replace />;
+    return <Navigate to={user.role === "Customer" ? from ?? "/account" : homeFor(user.role)} replace />;
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -41,7 +42,7 @@ export const LoginPage: React.FC = () => {
           ? `Welcome back, ${signedIn.name.split(" ")[0]}!`
           : `Welcome, ${signedIn.name.split(" ")[0]}! Check your email to verify your address.`
       );
-      navigate(signedIn.role === "Admin" ? "/admin" : from ?? "/account", { replace: true });
+      navigate(signedIn.role === "Customer" ? from ?? "/account" : homeFor(signedIn.role), { replace: true });
     } catch (error) {
       toast.error(apiErrorMessage(error, mode === "login" ? "Sign in failed" : "Couldn't create account"));
     } finally {
