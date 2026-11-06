@@ -80,6 +80,8 @@ public class OrderDto
 public class CreateOrderDto
 {
     public string CustomerName { get; set; } = string.Empty;
+    /// <summary>In-salon code from the table QR; required so only clients in the salon can order.</summary>
+    public string? SalonCode { get; set; }
     public List<OrderItemCreateDto> Items { get; set; } = new();
     public string? Notes { get; set; }
 }

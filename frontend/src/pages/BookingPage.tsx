@@ -5,6 +5,7 @@ import { servicesApi, stylistsApi, bookingsApi } from "../services/api";
 import toast from "react-hot-toast";
 import { apiErrorMessage, formatRand } from "../utils/format";
 import { useAuth } from "../context/AuthContext";
+import { ScanToPay } from "../components/ScanToPay";
 
 const todayIso = () => {
   const d = new Date();
@@ -115,6 +116,7 @@ export const BookingPage: React.FC = () => {
       <div className="py-12">
         <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="card text-center">
+            {/* confirmation */}
             <div className="mx-auto mb-4 h-16 w-16 rounded-full flex items-center justify-center text-3xl text-white bg-gradient-to-br from-gold-300 to-gold-600">
               ✓
             </div>
@@ -133,10 +135,10 @@ export const BookingPage: React.FC = () => {
               <p className="font-elegant text-4xl font-bold text-blush-600">
                 {confirmed.paymentReference}
               </p>
-              <p className="text-sm text-blush-900/70 mt-4">
-                Please transfer <strong>{formatRand(confirmed.servicePrice)}</strong> via EFT
-                using this reference number.
-              </p>
+
+            </div>
+            <div className="mb-6">
+              <ScanToPay reference={confirmed.paymentReference} amount={confirmed.servicePrice} />
             </div>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               {user ? (

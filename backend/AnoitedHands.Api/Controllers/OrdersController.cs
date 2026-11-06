@@ -14,10 +14,12 @@ public class OrdersController : ControllerBase
         new(StringComparer.OrdinalIgnoreCase) { "Received", "Preparing", "Ready", "Completed", "Cancelled" };
 
     private readonly IOrderService _orderService;
+    private readonly ISalonCodeService _salonCode;
 
-    public OrdersController(IOrderService orderService)
+    public OrdersController(IOrderService orderService, ISalonCodeService salonCode)
     {
         _orderService = orderService;
+        _salonCode = salonCode;
     }
 
     /// <summary>All orders (admin only).</summary>
@@ -55,6 +57,12 @@ public class OrdersController : ControllerBase
     [HttpPost]
     public async Task<ActionResult<OrderDto>> CreateOrder([FromBody] CreateOrderDto dto)
     {
+        if (!await _salonCode.IsValidAsync(dto.SalonCode))
+            return StatusCode(StatusCodes.Status403Forbidden, new
+            {
+                message = "Café orders can only be placed while you're in the salon. Please scan the QR code on your table or at the counter.",
+                code = "salon_code_required",
+            });
         if (string.IsNullOrWhiteSpace(dto.CustomerName))
             return BadRequest(new { message = "Please enter your name." });
 

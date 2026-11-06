@@ -79,6 +79,7 @@ export interface OrderItem {
 
 export interface CreateOrderRequest {
   customerName: string;
+  salonCode?: string;
   items: {
     cafeItemId: number;
     quantity: number;
@@ -98,4 +99,59 @@ export interface User {
 export interface AuthResponse {
   token: string;
   user: User;
+}
+
+export interface GalleryItem {
+  id: number;
+  title: string;
+  category: string;
+  imageUrl: string;
+  createdAt: string;
+}
+
+export interface Review {
+  id: number;
+  reviewerName: string;
+  serviceId?: number | null;
+  serviceName?: string | null;
+  rating: number;
+  comment: string;
+  isVerifiedClient: boolean;
+  isVisible: boolean;
+  isMine: boolean;
+  createdAt: string;
+}
+
+export interface ReviewSummary {
+  average: number;
+  count: number;
+  reviews: Review[];
+}
+
+export type ReportType = "Concern" | "Lost Item" | "Other";
+export type ReportStatus = "Open" | "In Progress" | "Resolved";
+
+export interface SupportReport {
+  id: number;
+  referenceNumber: string;
+  type: ReportType;
+  name: string;
+  email: string;
+  phone?: string | null;
+  visitDate?: string | null;
+  itemDescription?: string | null;
+  message: string;
+  status: ReportStatus;
+  adminNotes?: string | null;
+  createdAt: string;
+  updatedAt?: string | null;
+}
+
+export interface PaymentInfo {
+  businessName: string;
+  bankName: string;
+  accountName: string;
+  accountNumber: string;
+  branchCode: string;
+  scanToPayUrlTemplate?: string | null;
 }

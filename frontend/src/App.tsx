@@ -14,6 +14,9 @@ import { AdminDashboard } from "./pages/AdminDashboard";
 import { LoginPage } from "./pages/LoginPage";
 import { AccountPage } from "./pages/AccountPage";
 import { ForgotPasswordPage, ResetPasswordPage, VerifyEmailPage } from "./pages/PasswordPages";
+import { GalleryPage } from "./pages/GalleryPage";
+import { ReviewsPage } from "./pages/ReviewsPage";
+import { HelpPage } from "./pages/HelpPage";
 
 // Auth
 import { AuthProvider } from "./context/AuthContext";
@@ -38,6 +41,9 @@ function App() {
             <Route path="/cafe" element={<CafePage />} />
             <Route path="/booking" element={<BookingPage />} />
             <Route path="/order" element={<OrderPage />} />
+            <Route path="/gallery" element={<GalleryPage />} />
+            <Route path="/reviews" element={<ReviewsPage />} />
+            <Route path="/help" element={<HelpPage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/forgot-password" element={<ForgotPasswordPage />} />
             <Route path="/reset-password" element={<ResetPasswordPage />} />

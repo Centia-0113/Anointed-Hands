@@ -1,11 +1,36 @@
 import React, { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
+import axios from "axios";
 import { useAuth } from "../context/AuthContext";
 import { CafeItem, CreateOrderRequest, Order } from "../types";
-import { cafeItemsApi, ordersApi } from "../services/api";
+import { cafeItemsApi, ordersApi, settingsApi } from "../services/api";
+import { ScanToPay } from "../components/ScanToPay";
 import toast from "react-hot-toast";
 import { apiErrorMessage, formatRand } from "../utils/format";
 import { categoryEmoji } from "./CafePage";
+
+// The in-salon code is kept for this browser tab only, for a few hours (i.e. while at the salon)
+const SALON_CODE_KEY = "ah_salon_code";
+const SALON_CODE_TTL_MS = 4 * 60 * 60 * 1000;
+
+const readStoredCode = (): string | null => {
+  try {
+    const raw = sessionStorage.getItem(SALON_CODE_KEY);
+    if (!raw) return null;
+    const { code, at } = JSON.parse(raw) as { code: string; at: number };
+    return Date.now() - at < SALON_CODE_TTL_MS ? code : null;
+  } catch {
+    return null;
+  }
+};
+const storeCode = (code: string | null) => {
+  try {
+    if (code) sessionStorage.setItem(SALON_CODE_KEY, JSON.stringify({ code, at: Date.now() }));
+    else sessionStorage.removeItem(SALON_CODE_KEY);
+  } catch {
+    /* storage unavailable */
+  }
+};
 
 interface CartItem {
   cafeItemId: number;
@@ -21,6 +46,60 @@ export const OrderPage: React.FC = () => {
   const [confirmed, setConfirmed] = useState<Order | null>(null);
   const [customerName, setCustomerName] = useState("");
   const [notes, setNotes] = useState("");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [salonCode, setSalonCode] = useState<string | null>(null);
+  const [gate, setGate] = useState<"checking" | "open" | "locked">("checking");
+  const [codeInput, setCodeInput] = useState("");
+  const [checking, setChecking] = useState(false);
+
+  // Unlock ordering with the code from the table QR (?code=...) or one saved earlier this visit
+  useEffect(() => {
+    const fromUrl = searchParams.get("code");
+    const candidate = fromUrl || readStoredCode();
+    if (fromUrl) {
+      searchParams.delete("code");
+      setSearchParams(searchParams, { replace: true });
+    }
+    if (!candidate) {
+      setGate("locked");
+      return;
+    }
+    settingsApi
+      .checkSalonCode(candidate)
+      .then((valid) => {
+        if (valid) {
+          storeCode(candidate);
+          setSalonCode(candidate);
+          setGate("open");
+        } else {
+          storeCode(null);
+          setGate("locked");
+          if (fromUrl) toast.error("That QR code has expired. Please scan the one on your table.");
+        }
+      })
+      .catch(() => setGate("locked"));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const unlock = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setChecking(true);
+    try {
+      const code = codeInput.trim().toUpperCase();
+      if (await settingsApi.checkSalonCode(code)) {
+        storeCode(code);
+        setSalonCode(code);
+        setGate("open");
+        toast.success("Welcome! You can order now.");
+      } else {
+        toast.error("That code isn't right. Check the sign on your table or ask at the counter.");
+      }
+    } catch (error) {
+      toast.error(apiErrorMessage(error, "Couldn't check the code"));
+    } finally {
+      setChecking(false);
+    }
+  };
   const { user } = useAuth();
 
   useEffect(() => {
@@ -73,11 +152,17 @@ export const OrderPage: React.FC = () => {
         customerName: customerName.trim(),
         items: cart.map((c) => ({ cafeItemId: c.cafeItemId, quantity: c.quantity })),
         notes: notes.trim() || undefined,
+        salonCode: salonCode ?? undefined,
       };
       const result = await ordersApi.create(order);
       setConfirmed(result);
       toast.success("Order placed!");
     } catch (error) {
+      if (axios.isAxiosError(error) && error.response?.status === 403) {
+        storeCode(null);
+        setSalonCode(null);
+        setGate("locked");
+      }
       toast.error(apiErrorMessage(error, "Failed to create order"));
     } finally {
       setLoading(false);
@@ -113,10 +198,9 @@ export const OrderPage: React.FC = () => {
                   {confirmed.paymentReference}
                 </p>
               </div>
-              <p className="sm:col-span-2 text-sm text-blush-900/70">
-                Please transfer <strong>{formatRand(confirmed.totalAmount)}</strong> via EFT
-                using this reference number.
-              </p>
+            </div>
+            <div className="mb-6">
+              <ScanToPay reference={confirmed.paymentReference} amount={confirmed.totalAmount} />
             </div>
             <p className="text-blush-900/70 mb-6">
               Your order will be prepared once payment is received. Check your order status at
@@ -132,6 +216,58 @@ export const OrderPage: React.FC = () => {
                 Place Another Order
               </button>
             </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (gate !== "open") {
+    return (
+      <div className="py-16 px-4">
+        <div className="max-w-md mx-auto">
+          <h1 className="text-5xl text-center">In-Salon Café</h1>
+          <div className="gold-rule mb-8" />
+          <div className="card text-center space-y-5">
+            {gate === "checking" ? (
+              <p className="text-blush-900/60">Checking you're in the salon…</p>
+            ) : (
+              <>
+                <div className="text-5xl">📱</div>
+                <p>
+                  Café orders are for clients <strong>in the salon</strong>. Scan the QR code on your table or at the
+                  counter with your phone camera to start ordering.
+                </p>
+                <form onSubmit={unlock} className="space-y-3 text-left">
+                  <label htmlFor="salon-code">Or enter the code shown on the sign</label>
+                  <input
+                    id="salon-code"
+                    required
+                    maxLength={12}
+                    autoComplete="off"
+                    autoCapitalize="characters"
+                    placeholder="e.g. P6AR3W"
+                    className="font-mono tracking-[0.3em] uppercase text-center text-xl"
+                    value={codeInput}
+                    onChange={(e) => setCodeInput(e.target.value)}
+                  />
+                  <button type="submit" disabled={checking} className="btn-primary w-full disabled:opacity-50">
+                    {checking ? "Checking…" : "Start Ordering"}
+                  </button>
+                </form>
+                <p className="text-sm text-blush-900/60">
+                  Not at the salon yet?{" "}
+                  <Link to="/cafe" className="font-bold text-blush-600 hover:underline">
+                    Browse the menu
+                  </Link>{" "}
+                  or{" "}
+                  <Link to="/booking" className="font-bold text-blush-600 hover:underline">
+                    book an appointment
+                  </Link>
+                  .
+                </p>
+              </>
+            )}
           </div>
         </div>
       </div>

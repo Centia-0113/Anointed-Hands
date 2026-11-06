@@ -34,8 +34,11 @@ export const CafePage: React.FC = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <h1 className="text-5xl text-center">Café Menu</h1>
         <div className="gold-rule" />
-        <p className="text-center text-blush-900/70 mb-10">
+        <p className="text-center text-blush-900/70 mb-4">
           Enjoy delicious treats while you relax
+        </p>
+        <p className="mx-auto mb-10 max-w-xl text-center text-sm rounded-full px-5 py-2 bg-gold-50 border border-gold-200">
+          📱 Ordering is available <strong>in the salon</strong> – scan the QR code on your table to order to your chair.
         </p>
 
         <div className="flex gap-2 mb-10 justify-center flex-wrap">

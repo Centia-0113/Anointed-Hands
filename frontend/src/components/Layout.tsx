@@ -10,9 +10,11 @@ interface HeaderProps {
 const links = [
   { to: "/", label: "Home" },
   { to: "/services", label: "Services" },
+  { to: "/gallery", label: "Gallery" },
   { to: "/cafe", label: "Café" },
+  { to: "/reviews", label: "Reviews" },
+  { to: "/help", label: "Help" },
   { to: "/booking", label: "Book Now" },
-  { to: "/order", label: "Order" },
 ];
 
 export const Header: React.FC<HeaderProps> = ({
@@ -66,7 +68,7 @@ export const Header: React.FC<HeaderProps> = ({
           </span>
         </Link>
 
-        <nav className="hidden md:flex items-center gap-1">
+        <nav className="hidden lg:flex items-center gap-0.5">
           {allLinks.map((l) => (
             <NavLink key={l.to} to={l.to} end={l.to === "/"} className={navClass}>
               {l.label}
@@ -81,7 +83,7 @@ export const Header: React.FC<HeaderProps> = ({
 
         <button
           type="button"
-          className="md:hidden p-2 rounded-lg text-blush-700 hover:bg-blush-100"
+          className="lg:hidden p-2 rounded-lg text-blush-700 hover:bg-blush-100"
           aria-label="Toggle menu"
           aria-expanded={open}
           onClick={() => setOpen((o) => !o)}
@@ -93,7 +95,7 @@ export const Header: React.FC<HeaderProps> = ({
       </div>
 
       {open && (
-        <nav className="md:hidden border-t border-blush-100 px-4 py-3 flex flex-col gap-1 bg-white">
+        <nav className="lg:hidden border-t border-blush-100 px-4 py-3 flex flex-col gap-1 bg-white">
           {allLinks.map((l) => (
             <NavLink
               key={l.to}
@@ -137,6 +139,10 @@ export const Footer: React.FC = () => {
             <h3 className="text-xl mb-3 text-gold-300">Contact</h3>
             <p className="text-blush-200 text-sm">contact@anoitedhandsalon.com</p>
             <p className="text-blush-200 text-sm">+27 31 000 0000</p>
+            <p className="mt-3 text-sm space-x-3">
+              <Link to="/help" className="text-gold-300 hover:underline">Concerns &amp; lost property</Link>
+              <Link to="/reviews" className="text-gold-300 hover:underline">Reviews</Link>
+            </p>
           </div>
         </div>
         <div className="h-px my-8 bg-gradient-to-r from-transparent via-gold-500 to-transparent" />

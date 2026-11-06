@@ -19,6 +19,10 @@ public class AnoitedHandsDbContext : DbContext
     public DbSet<Payment> Payments { get; set; }
     public DbSet<User> Users { get; set; }
     public DbSet<UserToken> UserTokens { get; set; }
+    public DbSet<GalleryItem> GalleryItems { get; set; }
+    public DbSet<Review> Reviews { get; set; }
+    public DbSet<SupportReport> SupportReports { get; set; }
+    public DbSet<AppSetting> AppSettings { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -40,6 +44,14 @@ public class AnoitedHandsDbContext : DbContext
             .WithMany()
             .HasForeignKey(t => t.UserId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<AppSetting>().HasKey(s => s.Key);
+        modelBuilder.Entity<Review>().HasIndex(r => new { r.UserId, r.ServiceId });
+        modelBuilder.Entity<Review>()
+            .HasOne(r => r.User).WithMany().HasForeignKey(r => r.UserId).OnDelete(DeleteBehavior.Cascade);
+        modelBuilder.Entity<Review>()
+            .HasOne(r => r.Service).WithMany().HasForeignKey(r => r.ServiceId).OnDelete(DeleteBehavior.SetNull);
+        modelBuilder.Entity<SupportReport>().HasIndex(r => r.UserId);
 
         modelBuilder.Entity<Booking>().HasIndex(b => b.UserId);
         modelBuilder.Entity<Booking>().HasIndex(b => b.CustomerEmail);
@@ -77,7 +89,7 @@ public class AnoitedHandsDbContext : DbContext
         modelBuilder.Entity<Stylist>().HasData(
             new Stylist { Id = 1, Name = "Zara Malik", Email = "zara@anoitedhandsalon.com", Specialization = "Hair", IsActive = true },
             new Stylist { Id = 2, Name = "Keisha Brown", Email = "keisha@anoitedhandsalon.com", Specialization = "Nails", IsActive = true },
-            new Stylist { Id = 3, Name = "Amara Jones", Email = "amara@anoitedhandsalon.com", Specialization = "Facials", IsActive = true }
+            new Stylist { Id = 3, Name = "Amara Jones", Email = "amara@anoitedhandsalon.com", Specialization = "Facials, Brows & Lashes", IsActive = true }
         );
 
         // Seed Services (prices in ZAR)
@@ -87,7 +99,11 @@ public class AnoitedHandsDbContext : DbContext
             new Service { Id = 3, Name = "Knotless Braids", Description = "Medium knotless braids, waist length", Price = 950.00m, DurationMinutes = 240, Category = "Hair", IsActive = true },
             new Service { Id = 4, Name = "Gel Manicure", Description = "Cuticle care, shaping and long-lasting gel polish", Price = 280.00m, DurationMinutes = 60, Category = "Nails", IsActive = true },
             new Service { Id = 5, Name = "Spa Pedicure", Description = "Soak, scrub, massage and polish", Price = 320.00m, DurationMinutes = 60, Category = "Nails", IsActive = true },
-            new Service { Id = 6, Name = "Signature Facial", Description = "Deep cleansing facial with extractions and a glow mask", Price = 450.00m, DurationMinutes = 75, Category = "Facials", IsActive = true }
+            new Service { Id = 6, Name = "Signature Facial", Description = "Deep cleansing facial with extractions and a glow mask", Price = 450.00m, DurationMinutes = 75, Category = "Facials", IsActive = true },
+            new Service { Id = 7, Name = "Eyebrow Shaping", Description = "Wax and tweeze shaping to frame your face", Price = 120.00m, DurationMinutes = 30, Category = "Facials", IsActive = true },
+            new Service { Id = 8, Name = "Brow Tint & Shape", Description = "Brow shaping finished with a tint for fuller-looking brows", Price = 180.00m, DurationMinutes = 45, Category = "Facials", IsActive = true },
+            new Service { Id = 9, Name = "Classic Lash Extensions", Description = "Full set of individually applied classic lashes", Price = 450.00m, DurationMinutes = 90, Category = "Facials", IsActive = true },
+            new Service { Id = 10, Name = "Lash Lift & Tint", Description = "Lift and tint your natural lashes for a wide-awake look", Price = 350.00m, DurationMinutes = 60, Category = "Facials", IsActive = true }
         );
 
         // Seed Cafe Items (prices in ZAR)

@@ -32,6 +32,7 @@ builder.Services.AddScoped<IBookingService, BookingService>();
 builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IEmailSender, EmailSender>();
+builder.Services.AddScoped<ISalonCodeService, SalonCodeService>();
 
 // Rate limiting: sign-in / registration / reset endpoints, per client IP
 builder.Services.AddRateLimiter(options =>
@@ -43,6 +44,16 @@ builder.Services.AddRateLimiter(options =>
             _ => new FixedWindowRateLimiterOptions
             {
                 PermitLimit = builder.Configuration.GetValue("RateLimits:AuthPerMinute", 10),
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0,
+            }));
+    // Public forms (reviews, reports): a few per minute per IP
+    options.AddPolicy(RateLimits.Forms, http =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            http.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = builder.Configuration.GetValue("RateLimits:FormsPerMinute", 5),
                 Window = TimeSpan.FromMinutes(1),
                 QueueLimit = 0,
             }));
@@ -145,6 +156,8 @@ using (var scope = app.Services.CreateScope())
     await scope.ServiceProvider.GetRequiredService<IAuthService>().EnsureAdminAsync();
 }
 
+// Serves uploaded gallery photos from wwwroot/uploads
+app.UseStaticFiles();
 app.UseCors("AllowReactApp");
 app.UseAuthentication();
 app.UseAuthorization();
@@ -156,4 +169,5 @@ app.Run(builder.Configuration.GetValue<string>("Urls") ?? "http://localhost:5000
 public static class RateLimits
 {
     public const string Auth = "auth";
+    public const string Forms = "forms";
 }

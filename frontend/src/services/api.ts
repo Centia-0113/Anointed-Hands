@@ -9,9 +9,18 @@ import {
   CreateOrderRequest,
   AuthResponse,
   User,
+  GalleryItem,
+  Review,
+  ReviewSummary,
+  SupportReport,
+  PaymentInfo,
 } from "../types";
 
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000/api";
+
+/** Absolute URL for files served by the API (e.g. gallery photos at /uploads/...). */
+export const assetUrl = (path: string): string =>
+  /^https?:\/\//.test(path) ? path : API_URL.replace(/\/api\/?$/, "") + path;
 
 const api: AxiosInstance = axios.create({
   baseURL: API_URL,
@@ -192,6 +201,66 @@ export const ordersApi = {
   markPaid: async (id: number, paymentReference: string): Promise<void> => {
     await api.post(`/orders/${id}/mark-paid`, { paymentReference });
   },
+};
+
+// Gallery API
+export const galleryApi = {
+  getAll: async (): Promise<GalleryItem[]> => (await api.get("/gallery")).data,
+  getCategories: async (): Promise<string[]> => (await api.get("/gallery/categories")).data,
+  upload: async (file: File, title: string, category: string): Promise<GalleryItem> => {
+    const form = new FormData();
+    form.append("file", file);
+    form.append("title", title);
+    form.append("category", category);
+    return (await api.post("/gallery", form, { headers: { "Content-Type": "multipart/form-data" } })).data;
+  },
+  remove: async (id: number): Promise<void> => {
+    await api.delete(`/gallery/${id}`);
+  },
+};
+
+// Reviews API
+export const reviewsApi = {
+  getPublic: async (serviceId?: number): Promise<ReviewSummary> =>
+    (await api.get("/reviews", { params: { serviceId } })).data,
+  getMine: async (): Promise<Review[]> => (await api.get("/reviews/mine")).data,
+  getAll: async (): Promise<Review[]> => (await api.get("/reviews/all")).data,
+  save: async (data: { serviceId?: number | null; rating: number; comment: string }): Promise<Review> =>
+    (await api.post("/reviews", data)).data,
+  setVisibility: async (id: number, isVisible: boolean): Promise<void> => {
+    await api.put(`/reviews/${id}/visibility`, { isVisible });
+  },
+  remove: async (id: number): Promise<void> => {
+    await api.delete(`/reviews/${id}`);
+  },
+};
+
+// Concerns & lost-item reports API
+export const reportsApi = {
+  create: async (data: {
+    type: string;
+    name: string;
+    email: string;
+    phone?: string;
+    visitDate?: string;
+    itemDescription?: string;
+    message: string;
+  }): Promise<SupportReport> => (await api.post("/reports", data)).data,
+  getMine: async (): Promise<SupportReport[]> => (await api.get("/reports/mine")).data,
+  getAll: async (): Promise<SupportReport[]> => (await api.get("/reports")).data,
+  update: async (id: number, status: string, adminNotes?: string): Promise<void> => {
+    await api.put(`/reports/${id}`, { status, adminNotes });
+  },
+};
+
+// Settings API (payment details, in-salon ordering code)
+export const settingsApi = {
+  getPayment: async (): Promise<PaymentInfo> => (await api.get("/settings/payment")).data,
+  getSalonCode: async (): Promise<string> => (await api.get("/settings/salon-code")).data.code,
+  regenerateSalonCode: async (): Promise<string> =>
+    (await api.post("/settings/salon-code/regenerate")).data.code,
+  checkSalonCode: async (code: string): Promise<boolean> =>
+    (await api.post("/settings/salon-code/check", { code })).data.valid,
 };
 
 export default api;

@@ -118,6 +118,20 @@ dotnet user-secrets set "Smtp:From" "you@gmail.com"
 
 > Schema changes: the database is created with `EnsureCreated`, which does not alter existing tables. After model changes in development, delete `anointedhands.db` and restart.
 
+## ✨ More Features
+
+- **Scan to Pay** - booking and order confirmations (and unpaid items in *My Bookings*) show a QR code with the amount and reference.
+  Fill in `CompanySettings` (`BankName`, `AccountName`, `BankAccount`, `BranchCode`) in `appsettings.json`.
+  Without a payment provider the QR contains the EFT details; with a SnapScan / Zapper / PayShap merchant link, set
+  `CompanySettings:ScanToPayUrl` using `{reference}`, `{amount}` or `{amountCents}` placeholders and the QR opens the payment app.
+- **Gallery** (`/gallery`) - admin uploads photos (JPG/PNG/WebP, 5 MB max) under *Admin → Gallery*; stored in `wwwroot/uploads/gallery`.
+- **Reviews** (`/reviews`) - signed-in clients rate 1-5 stars overall or per service; "Verified client" when they have a paid booking. Admin can hide/delete.
+- **Help & lost property** (`/help`) - anyone can report a concern or lost item and gets a reference number; the admin is emailed,
+  responds under *Admin → Concerns & Lost Items*, and the client is emailed each update (signed-in clients also see status on the page).
+- **In-salon cafe ordering** - `/order` only works with the salon code. Print the QR sign from *Admin → Cafe QR*; scanning it unlocks
+  ordering for that browser tab for 4 hours. *Change Code* invalidates old signs.
+- **Facials** include eyebrow shaping, brow tint & shape, classic lash extensions and lash lift & tint.
+
 ## 🌐 API Endpoints
 
 ### Auth

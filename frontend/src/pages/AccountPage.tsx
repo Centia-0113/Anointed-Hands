@@ -4,6 +4,7 @@ import toast from "react-hot-toast";
 import { Booking, Order } from "../types";
 import { authApi, bookingsApi, ordersApi } from "../services/api";
 import { ChangePasswordForm } from "../components/ChangePasswordForm";
+import { ScanToPayToggle } from "../components/ScanToPay";
 import { useAuth } from "../context/AuthContext";
 import { apiErrorMessage, formatRand } from "../utils/format";
 
@@ -115,6 +116,9 @@ export const AccountPage: React.FC = () => {
         <p className="text-sm">
           Payment ref: <span className="font-mono font-bold text-blush-700">{b.paymentReference}</span>
         </p>
+        {!b.isPaid && b.status !== "Cancelled" && (
+          <ScanToPayToggle reference={b.paymentReference} amount={b.servicePrice} />
+        )}
         {canCancel && !b.isPaid && (
           <button
             onClick={() => cancelBooking(b.id)}
@@ -140,7 +144,16 @@ export const AccountPage: React.FC = () => {
             Sign out
           </button>
         </div>
-        <p className="text-blush-900/70 mb-6">{user?.email}</p>
+        <p className="text-blush-900/70 mb-6">
+          {user?.email} ·{" "}
+          <Link to="/help" className="font-bold text-blush-600 hover:underline">
+            Report a concern or lost item
+          </Link>{" "}
+          ·{" "}
+          <Link to="/reviews" className="font-bold text-blush-600 hover:underline">
+            Write a review
+          </Link>
+        </p>
 
         {user && !user.emailConfirmed && (
           <div className="mb-8 rounded-xl px-5 py-4 bg-gold-50 border border-gold-300 flex flex-wrap items-center justify-between gap-3">
@@ -235,9 +248,14 @@ export const AccountPage: React.FC = () => {
                   ))}
                 </ul>
                 <OrderProgress status={o.status} />
-                <p className="text-sm mt-4 pt-4 border-t border-gold-100">
-                  Payment ref: <span className="font-mono font-bold text-blush-700">{o.paymentReference}</span>
-                </p>
+                <div className="flex flex-wrap justify-between items-start gap-3 mt-4 pt-4 border-t border-gold-100">
+                  <p className="text-sm">
+                    Payment ref: <span className="font-mono font-bold text-blush-700">{o.paymentReference}</span>
+                  </p>
+                  {!o.isPaid && o.status !== "Cancelled" && (
+                    <ScanToPayToggle reference={o.paymentReference} amount={o.totalAmount} />
+                  )}
+                </div>
               </div>
             ))}
           </div>

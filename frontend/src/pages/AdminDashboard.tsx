@@ -5,6 +5,9 @@ import toast from "react-hot-toast";
 import { apiErrorMessage, formatRand } from "../utils/format";
 import { ChangePasswordForm } from "../components/ChangePasswordForm";
 import { useAuth } from "../context/AuthContext";
+import { AdminGallery, AdminReports, AdminReviews, AdminSalonQr } from "../components/AdminPanels";
+
+type Tab = "bookings" | "orders" | "reports" | "reviews" | "gallery" | "cafe-qr";
 
 const ORDER_STATUSES = ["Received", "Preparing", "Ready", "Completed", "Cancelled"];
 
@@ -32,7 +35,8 @@ const StatCard: React.FC<{ label: string; value: string | number; tone: "rose" |
 export const AdminDashboard: React.FC = () => {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
-  const [activeTab, setActiveTab] = useState<"bookings" | "orders">("bookings");
+  const [activeTab, setActiveTab] = useState<Tab>("bookings");
+  const [openReports, setOpenReports] = useState<number | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [busyId, setBusyId] = useState<string | null>(null);
   const [showSettings, setShowSettings] = useState(false);
@@ -112,10 +116,11 @@ export const AdminDashboard: React.FC = () => {
       .filter((b) => b.isPaid && isToday(b.bookingDateTime))
       .reduce((sum, b) => sum + b.servicePrice, 0);
 
-  const tabClass = (tab: "bookings" | "orders") =>
+  const tabClass = (tab: Tab) =>
     activeTab === tab
-      ? "px-6 py-2.5 rounded-full font-bold bg-gradient-to-r from-blush-500 to-blush-600 text-white"
-      : "px-6 py-2.5 rounded-full font-bold bg-white/10 text-blush-100 hover:bg-white/20";
+      ? "px-5 py-2.5 rounded-full font-bold text-sm bg-gradient-to-r from-blush-500 to-blush-600 text-white"
+      : "px-5 py-2.5 rounded-full font-bold text-sm bg-white/10 text-blush-100 hover:bg-white/20";
+  const isTable = activeTab === "bookings" || activeTab === "orders";
 
   const th = "px-5 py-3 text-left text-xs font-bold uppercase tracking-wider text-gold-300";
   const td = "px-5 py-3";
@@ -151,21 +156,44 @@ export const AdminDashboard: React.FC = () => {
           <StatCard label="Total Transactions" value={bookings.length + orders.length} tone="plum" />
         </div>
 
-        <div className="flex flex-col md:flex-row gap-4 md:items-center mb-6">
-          <div className="flex gap-2">
-            <button onClick={() => setActiveTab("bookings")} className={tabClass("bookings")}>
-              Bookings ({bookings.length})
-            </button>
-            <button onClick={() => setActiveTab("orders")} className={tabClass("orders")}>
-              Orders ({orders.length})
-            </button>
-          </div>
+        <div className="flex flex-wrap gap-2 mb-6">
+          <button onClick={() => setActiveTab("bookings")} className={tabClass("bookings")}>
+            Bookings ({bookings.length})
+          </button>
+          <button onClick={() => setActiveTab("orders")} className={tabClass("orders")}>
+            Orders ({orders.length})
+          </button>
+          <button onClick={() => setActiveTab("reports")} className={tabClass("reports")}>
+            Concerns &amp; Lost Items{openReports ? ` (${openReports})` : ""}
+          </button>
+          <button onClick={() => setActiveTab("reviews")} className={tabClass("reviews")}>
+            Reviews
+          </button>
+          <button onClick={() => setActiveTab("gallery")} className={tabClass("gallery")}>
+            Gallery
+          </button>
+          <button onClick={() => setActiveTab("cafe-qr")} className={tabClass("cafe-qr")}>
+            Café QR
+          </button>
+        </div>
+
+        {/* Keep the reports panel mounted so the open-count badge stays current */}
+        <div className={activeTab === "reports" ? "" : "hidden"}>
+          <AdminReports onCountChange={setOpenReports} />
+        </div>
+        {activeTab === "reviews" && <AdminReviews />}
+        {activeTab === "gallery" && <AdminGallery />}
+        {activeTab === "cafe-qr" && <AdminSalonQr />}
+
+        {isTable && (
+        <>
+        <div className="mb-6">
           <input
             type="text"
             placeholder="Search by name, payment reference or order #…"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="md:flex-1 !bg-white/10 !text-white placeholder-blush-200/60 !border-blush-700 focus:!border-gold-400"
+            className="!bg-white/10 !text-white placeholder-blush-200/60 !border-blush-700 focus:!border-gold-400"
           />
         </div>
 
@@ -307,6 +335,8 @@ export const AdminDashboard: React.FC = () => {
             </table>
           )}
         </div>
+        </>
+        )}
       </div>
     </div>
   );
