@@ -40,12 +40,16 @@ public class BookingDto
     public string CustomerEmail { get; set; } = string.Empty;
     public string? CustomerPhone { get; set; }
     public int ServiceId { get; set; }
+    public string ServiceName { get; set; } = string.Empty;
+    public decimal ServicePrice { get; set; }
     public int StylistId { get; set; }
+    public string StylistName { get; set; } = string.Empty;
     public DateTime BookingDateTime { get; set; }
     public string Status { get; set; } = string.Empty;
     public string PaymentReference { get; set; } = string.Empty;
     public bool IsPaid { get; set; }
     public string? Notes { get; set; }
+    public DateTime CreatedAt { get; set; }
 }
 
 public class CreateBookingDto
@@ -68,6 +72,8 @@ public class OrderDto
     public string PaymentReference { get; set; } = string.Empty;
     public bool IsPaid { get; set; }
     public decimal TotalAmount { get; set; }
+    public string? Notes { get; set; }
+    public DateTime CreatedAt { get; set; }
     public List<OrderItemDto> Items { get; set; } = new();
 }
 
@@ -95,7 +101,57 @@ public class OrderItemCreateDto
 
 public class MarkPaidDto
 {
-    public string PaymentReference { get; set; } = string.Empty;
-    public string Type { get; set; } = string.Empty; // "Booking" or "Order"
+    public string? PaymentReference { get; set; }
+}
+
+public class RegisterDto
+{
+    public string Name { get; set; } = string.Empty;
+    public string Email { get; set; } = string.Empty;
+    public string? Phone { get; set; }
+    public string Password { get; set; } = string.Empty;
+}
+
+public class LoginDto
+{
+    public string Email { get; set; } = string.Empty;
+    public string Password { get; set; } = string.Empty;
+}
+
+public class UserDto
+{
     public int Id { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public string Email { get; set; } = string.Empty;
+    public string? Phone { get; set; }
+    public string Role { get; set; } = string.Empty;
+    public bool EmailConfirmed { get; set; }
+}
+
+public class AuthResponseDto
+{
+    public string Token { get; set; } = string.Empty;
+    public UserDto User { get; set; } = new();
+}
+
+public class ChangePasswordDto
+{
+    public string CurrentPassword { get; set; } = string.Empty;
+    public string NewPassword { get; set; } = string.Empty;
+}
+
+public class ForgotPasswordDto
+{
+    public string Email { get; set; } = string.Empty;
+}
+
+public class ResetPasswordDto
+{
+    public string Token { get; set; } = string.Empty;
+    public string NewPassword { get; set; } = string.Empty;
+}
+
+public class TokenDto
+{
+    public string Token { get; set; } = string.Empty;
 }

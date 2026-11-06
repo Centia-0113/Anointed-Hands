@@ -7,7 +7,9 @@ namespace AnoitedHands.Api.Services;
 
 public interface IBookingService
 {
-    Task<BookingDto> CreateBookingAsync(CreateBookingDto dto);
+    Task<BookingDto> CreateBookingAsync(CreateBookingDto dto, int? userId);
+    Task<List<BookingDto>> GetBookingsForUserAsync(int userId, string? verifiedEmail);
+    Task<bool> IsOwnerAsync(int bookingId, int userId, string? verifiedEmail);
     Task<List<BookingDto>> GetAllBookingsAsync();
     Task<BookingDto?> GetBookingByIdAsync(int id);
     Task<List<BookingDto>> SearchBookingsAsync(string customerName, string paymentReference);
@@ -25,10 +27,27 @@ public class BookingService : IBookingService
         _context = context;
     }
 
-    public async Task<BookingDto> CreateBookingAsync(CreateBookingDto dto)
+    public async Task<BookingDto> CreateBookingAsync(CreateBookingDto dto, int? userId)
     {
-        var paymentRef = $"AH-{DateTime.UtcNow.Ticks % 100000}";
-        
+        var service = await _context.Services.FindAsync(dto.ServiceId)
+            ?? throw new ArgumentException("Selected service does not exist.");
+        var stylist = await _context.Stylists.FindAsync(dto.StylistId)
+            ?? throw new ArgumentException("Selected stylist does not exist.");
+
+        if (OpeningHours.IsClosed(dto.BookingDateTime))
+            throw new ArgumentException("The salon is closed on Sundays. Please choose another day.");
+
+        var hours = OpeningHours.For(dto.BookingDateTime)!.Value;
+        var start = dto.BookingDateTime.TimeOfDay;
+        if (start < hours.Open || start.Add(TimeSpan.FromMinutes(service.DurationMinutes)) > hours.Close)
+            throw new ArgumentException("That time is outside our opening hours (Mon-Fri 9AM-6PM, Sat 10AM-5PM).");
+
+        var freeSlots = await GetAvailableSlotsAsync(dto.StylistId, dto.ServiceId, dto.BookingDateTime);
+        if (!freeSlots.Contains(dto.BookingDateTime))
+            throw new ArgumentException("That time is no longer available. Please choose another slot.");
+
+        var paymentRef = $"AH-B{Random.Shared.Next(10000, 99999)}";
+
         var booking = new Booking
         {
             CustomerName = dto.CustomerName,
@@ -38,13 +57,16 @@ public class BookingService : IBookingService
             StylistId = dto.StylistId,
             BookingDateTime = dto.BookingDateTime,
             PaymentReference = paymentRef,
-            Notes = dto.Notes
+            Notes = dto.Notes,
+            UserId = userId,
+            Service = service,
+            Stylist = stylist
         };
 
         _context.Bookings.Add(booking);
         await _context.SaveChangesAsync();
 
-        return await MapToDto(booking);
+        return MapToDto(booking);
     }
 
     public async Task<List<BookingDto>> GetAllBookingsAsync()
@@ -55,7 +77,35 @@ public class BookingService : IBookingService
             .OrderByDescending(b => b.BookingDateTime)
             .ToListAsync();
 
-        return await Task.WhenAll(bookings.Select(MapToDto)).ContinueWith(t => t.Result.ToList());
+        return bookings.Select(MapToDto).ToList();
+    }
+
+    /// <summary>
+    /// Bookings made while signed in, plus guest bookings made with the same email once that
+    /// email has been verified (so nobody can see someone else's bookings by registering their address).
+    /// </summary>
+    public async Task<List<BookingDto>> GetBookingsForUserAsync(int userId, string? verifiedEmail)
+    {
+        var bookings = await OwnedBy(userId, verifiedEmail)
+            .Include(b => b.Service)
+            .Include(b => b.Stylist)
+            .OrderByDescending(b => b.BookingDateTime)
+            .ToListAsync();
+
+        return bookings.Select(MapToDto).ToList();
+    }
+
+    public async Task<bool> IsOwnerAsync(int bookingId, int userId, string? verifiedEmail) =>
+        await OwnedBy(userId, verifiedEmail).AnyAsync(b => b.Id == bookingId);
+
+    private IQueryable<Booking> OwnedBy(int userId, string? verifiedEmail)
+    {
+        if (string.IsNullOrWhiteSpace(verifiedEmail))
+            return _context.Bookings.Where(b => b.UserId == userId);
+
+        var email = verifiedEmail.Trim().ToLower();
+        return _context.Bookings.Where(b =>
+            b.UserId == userId || (b.UserId == null && b.CustomerEmail.ToLower() == email));
     }
 
     public async Task<BookingDto?> GetBookingByIdAsync(int id)
@@ -65,7 +115,7 @@ public class BookingService : IBookingService
             .Include(b => b.Stylist)
             .FirstOrDefaultAsync(b => b.Id == id);
 
-        return booking != null ? await MapToDto(booking) : null;
+        return booking != null ? MapToDto(booking) : null;
     }
 
     public async Task<List<BookingDto>> SearchBookingsAsync(string customerName, string paymentReference)
@@ -82,7 +132,7 @@ public class BookingService : IBookingService
             query = query.Where(b => b.PaymentReference.Contains(paymentReference));
 
         var bookings = await query.ToListAsync();
-        return await Task.WhenAll(bookings.Select(MapToDto)).ContinueWith(t => t.Result.ToList());
+        return bookings.Select(MapToDto).ToList();
     }
 
     public async Task<bool> MarkBookingAsPaidAsync(int bookingId, string paymentReference)
@@ -92,7 +142,8 @@ public class BookingService : IBookingService
 
         booking.IsPaid = true;
         booking.Status = "Confirmed";
-        booking.PaymentReference = paymentReference;
+        if (!string.IsNullOrWhiteSpace(paymentReference))
+            booking.PaymentReference = paymentReference.Trim();
 
         _context.Bookings.Update(booking);
         await _context.SaveChangesAsync();
@@ -115,30 +166,38 @@ public class BookingService : IBookingService
         var service = await _context.Services.FindAsync(serviceId);
         if (service == null) return new();
 
+        var dayStart = date.Date;
+        var dayEnd = dayStart.AddDays(1);
         var bookingsOnDate = await _context.Bookings
-            .Where(b => b.StylistId == stylistId 
-                && b.BookingDateTime.Date == date.Date 
+            .Include(b => b.Service)
+            .Where(b => b.StylistId == stylistId
+                && b.BookingDateTime >= dayStart
+                && b.BookingDateTime < dayEnd
                 && b.Status != "Cancelled")
             .ToListAsync();
 
         var slots = new List<DateTime>();
-        var startTime = date.Date.AddHours(9);
-        var endTime = date.Date.AddHours(18);
+        var hours = OpeningHours.For(date);
+        if (hours == null) return slots; // closed (Sunday)
+        var startTime = date.Date.Add(hours.Value.Open);
+        var endTime = date.Date.Add(hours.Value.Close);
 
-        for (var slot = startTime; slot <= endTime; slot = slot.AddMinutes(30))
+        // A slot is free when the appointment fits before closing and doesn't overlap an existing booking
+        for (var slot = startTime; slot.AddMinutes(service.DurationMinutes) <= endTime; slot = slot.AddMinutes(OpeningHours.SlotMinutes))
         {
-            var isBooked = bookingsOnDate.Any(b => 
-                b.BookingDateTime <= slot && 
-                b.BookingDateTime.AddMinutes(service.DurationMinutes) > slot);
+            var slotEnd = slot.AddMinutes(service.DurationMinutes);
+            var overlaps = bookingsOnDate.Any(b =>
+                b.BookingDateTime < slotEnd &&
+                b.BookingDateTime.AddMinutes(b.Service?.DurationMinutes ?? 30) > slot);
 
-            if (!isBooked)
+            if (!overlaps && slot > DateTime.Now)
                 slots.Add(slot);
         }
 
         return slots;
     }
 
-    private async Task<BookingDto> MapToDto(Booking booking)
+    private static BookingDto MapToDto(Booking booking)
     {
         return new BookingDto
         {
@@ -147,12 +206,16 @@ public class BookingService : IBookingService
             CustomerEmail = booking.CustomerEmail,
             CustomerPhone = booking.CustomerPhone,
             ServiceId = booking.ServiceId,
+            ServiceName = booking.Service?.Name ?? "",
+            ServicePrice = booking.Service?.Price ?? 0,
             StylistId = booking.StylistId,
+            StylistName = booking.Stylist?.Name ?? "",
             BookingDateTime = booking.BookingDateTime,
             Status = booking.Status,
             PaymentReference = booking.PaymentReference,
             IsPaid = booking.IsPaid,
-            Notes = booking.Notes
+            Notes = booking.Notes,
+            CreatedAt = DateTime.SpecifyKind(booking.CreatedAt, DateTimeKind.Utc)
         };
     }
 }

@@ -34,12 +34,16 @@ export interface Booking {
   customerEmail: string;
   customerPhone?: string;
   serviceId: number;
+  serviceName: string;
+  servicePrice: number;
   stylistId: number;
+  stylistName: string;
   bookingDateTime: string;
   status: string;
   paymentReference: string;
   isPaid: boolean;
   notes?: string;
+  createdAt: string;
 }
 
 export interface CreateBookingRequest {
@@ -60,6 +64,8 @@ export interface Order {
   paymentReference: string;
   isPaid: boolean;
   totalAmount: number;
+  notes?: string;
+  createdAt: string;
   items: OrderItem[];
 }
 
@@ -78,4 +84,18 @@ export interface CreateOrderRequest {
     quantity: number;
   }[];
   notes?: string;
+}
+
+export interface User {
+  id: number;
+  name: string;
+  email: string;
+  phone?: string;
+  role: "Admin" | "Customer";
+  emailConfirmed: boolean;
+}
+
+export interface AuthResponse {
+  token: string;
+  user: User;
 }

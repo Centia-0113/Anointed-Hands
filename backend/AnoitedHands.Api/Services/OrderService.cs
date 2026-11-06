@@ -7,7 +7,9 @@ namespace AnoitedHands.Api.Services;
 
 public interface IOrderService
 {
-    Task<OrderDto> CreateOrderAsync(CreateOrderDto dto);
+    Task<OrderDto> CreateOrderAsync(CreateOrderDto dto, int? userId);
+    Task<List<OrderDto>> GetOrdersForUserAsync(int userId);
+    Task<int?> GetOwnerIdAsync(int orderId);
     Task<List<OrderDto>> GetAllOrdersAsync();
     Task<OrderDto?> GetOrderByIdAsync(int id);
     Task<List<OrderDto>> SearchOrdersAsync(string customerName, string paymentReference);
@@ -24,28 +26,33 @@ public class OrderService : IOrderService
         _context = context;
     }
 
-    public async Task<OrderDto> CreateOrderAsync(CreateOrderDto dto)
+    public async Task<OrderDto> CreateOrderAsync(CreateOrderDto dto, int? userId)
     {
-        var paymentRef = $"AH-{DateTime.UtcNow.Ticks % 100000}";
-        var orderNumber = $"ORD-{DateTime.UtcNow:yyyyMMddHHmmss}";
+        var paymentRef = $"AH-C{Random.Shared.Next(10000, 99999)}";
+        var orderNumber = $"ORD-{DateTime.UtcNow:MMdd}-{Random.Shared.Next(100, 999)}";
 
         var orderItems = new List<OrderItem>();
         decimal totalAmount = 0;
 
         foreach (var item in dto.Items)
         {
+            if (item.Quantity <= 0) continue;
             var cafeItem = await _context.CafeItems.FindAsync(item.CafeItemId);
-            if (cafeItem == null) continue;
+            if (cafeItem == null || !cafeItem.IsActive || cafeItem.IsOutOfStock) continue;
 
             var orderItem = new OrderItem
             {
                 CafeItemId = item.CafeItemId,
                 Quantity = item.Quantity,
-                Price = cafeItem.Price
+                Price = cafeItem.Price,
+                CafeItem = cafeItem
             };
             orderItems.Add(orderItem);
             totalAmount += cafeItem.Price * item.Quantity;
         }
+
+        if (orderItems.Count == 0)
+            throw new ArgumentException("Your order has no available items.");
 
         var order = new Order
         {
@@ -55,13 +62,14 @@ public class OrderService : IOrderService
             TotalAmount = totalAmount,
             Items = orderItems,
             Status = "Received",
-            Notes = dto.Notes
+            Notes = dto.Notes,
+            UserId = userId
         };
 
         _context.Orders.Add(order);
         await _context.SaveChangesAsync();
 
-        return await MapToDto(order);
+        return MapToDto(order);
     }
 
     public async Task<List<OrderDto>> GetAllOrdersAsync()
@@ -72,8 +80,23 @@ public class OrderService : IOrderService
             .OrderByDescending(o => o.CreatedAt)
             .ToListAsync();
 
-        return await Task.WhenAll(orders.Select(MapToDto)).ContinueWith(t => t.Result.ToList());
+        return orders.Select(MapToDto).ToList();
     }
+
+    public async Task<List<OrderDto>> GetOrdersForUserAsync(int userId)
+    {
+        var orders = await _context.Orders
+            .Include(o => o.Items)
+            .ThenInclude(oi => oi.CafeItem)
+            .Where(o => o.UserId == userId)
+            .OrderByDescending(o => o.CreatedAt)
+            .ToListAsync();
+
+        return orders.Select(MapToDto).ToList();
+    }
+
+    public async Task<int?> GetOwnerIdAsync(int orderId) =>
+        await _context.Orders.Where(o => o.Id == orderId).Select(o => o.UserId).FirstOrDefaultAsync();
 
     public async Task<OrderDto?> GetOrderByIdAsync(int id)
     {
@@ -82,7 +105,7 @@ public class OrderService : IOrderService
             .ThenInclude(oi => oi.CafeItem)
             .FirstOrDefaultAsync(o => o.Id == id);
 
-        return order != null ? await MapToDto(order) : null;
+        return order != null ? MapToDto(order) : null;
     }
 
     public async Task<List<OrderDto>> SearchOrdersAsync(string customerName, string paymentReference)
@@ -99,7 +122,7 @@ public class OrderService : IOrderService
             query = query.Where(o => o.PaymentReference.Contains(paymentReference));
 
         var orders = await query.ToListAsync();
-        return await Task.WhenAll(orders.Select(MapToDto)).ContinueWith(t => t.Result.ToList());
+        return orders.Select(MapToDto).ToList();
     }
 
     public async Task<bool> UpdateOrderStatusAsync(int orderId, string status)
@@ -122,14 +145,15 @@ public class OrderService : IOrderService
         if (order == null) return false;
 
         order.IsPaid = true;
-        order.PaymentReference = paymentReference;
+        if (!string.IsNullOrWhiteSpace(paymentReference))
+            order.PaymentReference = paymentReference.Trim();
 
         _context.Orders.Update(order);
         await _context.SaveChangesAsync();
         return true;
     }
 
-    private async Task<OrderDto> MapToDto(Order order)
+    private static OrderDto MapToDto(Order order)
     {
         return new OrderDto
         {
@@ -140,6 +164,8 @@ public class OrderService : IOrderService
             PaymentReference = order.PaymentReference,
             IsPaid = order.IsPaid,
             TotalAmount = order.TotalAmount,
+            Notes = order.Notes,
+            CreatedAt = DateTime.SpecifyKind(order.CreatedAt, DateTimeKind.Utc),
             Items = order.Items.Select(oi => new OrderItemDto
             {
                 Id = oi.Id,

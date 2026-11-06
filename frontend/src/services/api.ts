@@ -7,6 +7,8 @@ import {
   Order,
   CreateBookingRequest,
   CreateOrderRequest,
+  AuthResponse,
+  User,
 } from "../types";
 
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000/api";
@@ -17,6 +19,76 @@ const api: AxiosInstance = axios.create({
     "Content-Type": "application/json",
   },
 });
+
+// ---- Auth token handling -------------------------------------------------
+const TOKEN_KEY = "ah_token";
+
+export const tokenStore = {
+  get: (): string | null => {
+    try {
+      return localStorage.getItem(TOKEN_KEY);
+    } catch {
+      return null;
+    }
+  },
+  set: (token: string) => {
+    try {
+      localStorage.setItem(TOKEN_KEY, token);
+    } catch {
+      /* storage unavailable */
+    }
+  },
+  clear: () => {
+    try {
+      localStorage.removeItem(TOKEN_KEY);
+    } catch {
+      /* storage unavailable */
+    }
+  },
+};
+
+/** Fired when the API rejects our token, so the app can sign the user out. */
+export const AUTH_EXPIRED_EVENT = "ah:auth-expired";
+
+api.interceptors.request.use((config) => {
+  const token = tokenStore.get();
+  if (token) config.headers.Authorization = `Bearer ${token}`;
+  return config;
+});
+
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error?.response?.status === 401 && tokenStore.get()) {
+      tokenStore.clear();
+      window.dispatchEvent(new Event(AUTH_EXPIRED_EVENT));
+    }
+    return Promise.reject(error);
+  }
+);
+
+// Auth API
+export const authApi = {
+  login: async (email: string, password: string): Promise<AuthResponse> =>
+    (await api.post("/auth/login", { email, password })).data,
+  register: async (data: {
+    name: string;
+    email: string;
+    phone?: string;
+    password: string;
+  }): Promise<AuthResponse> => (await api.post("/auth/register", data)).data,
+  me: async (): Promise<User> => (await api.get("/auth/me")).data,
+  changePassword: async (currentPassword: string, newPassword: string): Promise<AuthResponse> =>
+    (await api.post("/auth/change-password", { currentPassword, newPassword })).data,
+  resendVerification: async (): Promise<{ message: string }> =>
+    (await api.post("/auth/resend-verification")).data,
+  verifyEmail: async (token: string): Promise<User> =>
+    (await api.post("/auth/verify-email", { token })).data,
+  forgotPassword: async (email: string): Promise<{ message: string }> =>
+    (await api.post("/auth/forgot-password", { email })).data,
+  resetPassword: async (token: string, newPassword: string): Promise<{ message: string }> =>
+    (await api.post("/auth/reset-password", { token, newPassword })).data,
+};
 
 // Services API
 export const servicesApi = {
@@ -60,6 +132,7 @@ export const bookingsApi = {
     const response = await api.get("/bookings");
     return response.data;
   },
+  getMine: async (): Promise<Booking[]> => (await api.get("/bookings/mine")).data,
   getById: async (id: number): Promise<Booking> => {
     const response = await api.get(`/bookings/${id}`);
     return response.data;
@@ -98,6 +171,7 @@ export const ordersApi = {
     const response = await api.get("/orders");
     return response.data;
   },
+  getMine: async (): Promise<Order[]> => (await api.get("/orders/mine")).data,
   getById: async (id: number): Promise<Order> => {
     const response = await api.get(`/orders/${id}`);
     return response.data;

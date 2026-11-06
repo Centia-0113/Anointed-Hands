@@ -21,7 +21,7 @@ A complete booking and management platform for a salon and in-salon café with e
 
 ### Backend
 - **Framework**: ASP.NET Core 8.0 (C#)
-- **Database**: SQL Server / LocalDB
+- **Database**: SQLite by default (auto-created and seeded on first run); SQL Server optional
 - **Architecture**: Clean layers (Controllers → Services → Data)
 - **API**: RESTful with Swagger documentation
 
@@ -70,11 +70,10 @@ Anointed Hands/
 ### Backend Setup
 ```bash
 cd backend/AnoitedHands.Api
-dotnet restore
-dotnet build
-dotnet ef database update
 dotnet run
 ```
+The SQLite database file `anointedhands.db` is created and seeded automatically.
+To use SQL Server instead, set `"DatabaseProvider": "SqlServer"` in `appsettings.json`.
 API runs on `http://localhost:5000`
 
 ### Frontend Setup
@@ -85,7 +84,49 @@ npm start
 ```
 Frontend runs on `http://localhost:3000`
 
+## 🔐 Accounts & Access
+
+- **Customers** can register / sign in (`/login`) and see their own booking and café order history at `/account`.
+  Guests can still book and order, but only bookings made while signed in appear in a history.
+- **Admin dashboard** (`/admin`) and all admin API endpoints require the `Admin` role (JWT bearer token).
+- Secrets live in .NET user-secrets (never in git). One-time setup in `backend/AnoitedHands.Api`:
+
+```bash
+dotnet user-secrets set "Jwt:Key" "<at least 32 random characters>"
+dotnet user-secrets set "Admin:Email" "admin@anointedhands.co.za"
+dotnet user-secrets set "Admin:Password" "<a strong password>"
+```
+
+The admin account is created on first start if none exists.
+
+**Security features**
+- Customers verify their email via an emailed link; once verified, guest bookings made with that email appear in their history.
+- Forgot / reset password by emailed one-time link (expires in 1 hour).
+- Change password from *My Account → Settings* (customers) or *Account settings* on the admin dashboard. Changing or resetting a password signs out all other sessions.
+- Account lockout for 15 minutes after 5 failed sign-ins, plus a per-IP limit of 10 auth requests per minute.
+
+**Sending email** - until SMTP is configured, emails (with their links) are printed in the API console. To send real email, e.g. with a Gmail app password:
+
+```bash
+dotnet user-secrets set "Smtp:Host" "smtp.gmail.com"
+dotnet user-secrets set "Smtp:Username" "you@gmail.com"
+dotnet user-secrets set "Smtp:Password" "<app password>"
+dotnet user-secrets set "Smtp:From" "you@gmail.com"
+```
+
+**Opening hours** - bookings are only accepted Mon-Fri 9AM-6PM and Sat 10AM-5PM (closed Sundays), enforced by the API (`Services/OpeningHours.cs`), and the API rejects double-bookings.
+
+> Schema changes: the database is created with `EnsureCreated`, which does not alter existing tables. After model changes in development, delete `anointedhands.db` and restart.
+
 ## 🌐 API Endpoints
+
+### Auth
+- `POST /api/auth/register` - Create customer account
+- `POST /api/auth/login` - Sign in (returns JWT)
+- `GET /api/auth/me` - Current user
+- `POST /api/auth/change-password` - Change password (signed in)
+- `POST /api/auth/verify-email` / `resend-verification` - Email verification
+- `POST /api/auth/forgot-password` / `reset-password` - Password reset
 
 ### Core Resources
 - `GET /api/services` - All services
@@ -94,13 +135,15 @@ Frontend runs on `http://localhost:3000`
 
 ### Bookings
 - `POST /api/bookings` - Create booking
-- `GET /api/bookings` - Get all bookings
+- `GET /api/bookings` - Get all bookings (admin)
+- `GET /api/bookings/mine` - Signed-in customer's bookings
 - `GET /api/bookings/available-slots` - Available time slots
 - `POST /api/bookings/{id}/mark-paid` - Mark booking paid
 
 ### Orders
 - `POST /api/orders` - Create order
-- `GET /api/orders` - Get all orders
+- `GET /api/orders` - Get all orders (admin)
+- `GET /api/orders/mine` - Signed-in customer's orders
 - `PUT /api/orders/{id}/status` - Update order status
 - `POST /api/orders/{id}/mark-paid` - Mark order paid
 
@@ -114,8 +157,9 @@ Frontend runs on `http://localhost:3000`
 
 ## 🎨 Design
 
-- **Color Scheme**: Elegant salon theme (soft purples, golds, oranges)
-- **Typography**: Georgia/Garamond serif fonts for elegance
+- **Color Scheme**: Blush & rose pinks with warm gold accents (`blush-*` and `gold-*` in `tailwind.config.js`)
+- **Typography**: Cormorant Garamond headings, Lato body text
+- **Currency**: South African Rand (R)
 - **Components**: Card-based layout with smooth transitions
 - **Responsive**: Mobile-first design with Tailwind CSS
 
@@ -123,9 +167,9 @@ Frontend runs on `http://localhost:3000`
 
 The API comes pre-seeded with:
 
-**Services**: 5 services (Hair, Nails, Facials)
+**Services**: 6 services (Hair, Nails, Facials)
 **Stylists**: 3 stylists with specializations
-**Café Items**: 5 café items (Cakes, Muffins, Donuts, Drinks)
+**Café Items**: 7 café items (Cakes, Muffins, Donuts, Drinks)
 
 ## 📝 Configuration
 

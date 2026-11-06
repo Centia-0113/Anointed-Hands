@@ -13,8 +13,9 @@ public class Booking
     public string PaymentReference { get; set; } = string.Empty;
     public bool IsPaid { get; set; } = false;
     public string? Notes { get; set; }
+    public int? UserId { get; set; } // set when booked by a signed-in customer
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-    
+
     // Navigation
     public Service? Service { get; set; }
     public Stylist? Stylist { get; set; }

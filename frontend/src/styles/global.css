@@ -2,150 +2,164 @@
 @tailwind components;
 @tailwind utilities;
 
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
+:root {
+  --rose: #c2185b;
+  --rose-deep: #9e1450;
+  --plum: #4a0d29;
+  --blush: #fdeef3;
+  --gold: #c9a227;
+  --gold-light: #f0dc97;
+  --gold-gradient: linear-gradient(135deg, #e6c766 0%, #c9a227 50%, #a8841c 100%);
+  --rose-gradient: linear-gradient(135deg, #de5287 0%, #c2185b 100%);
 }
 
-html, body, #root {
-  height: 100%;
-  width: 100%;
+@layer base {
+  html,
+  body,
+  #root {
+    min-height: 100%;
+  }
+
+  body {
+    @apply font-body antialiased;
+    background: linear-gradient(160deg, #fff7fa 0%, #fdeef3 45%, #fdf9ec 100%);
+    background-attachment: fixed;
+    color: var(--plum);
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    @apply font-elegant;
+    color: var(--plum);
+    font-weight: 700;
+    line-height: 1.15;
+  }
+
+  input,
+  textarea,
+  select {
+    @apply w-full px-4 py-3 rounded-lg border-2 border-blush-200 bg-white/90 transition-all;
+    color: var(--plum);
+  }
+
+  input:focus,
+  textarea:focus,
+  select:focus {
+    outline: none;
+    border-color: var(--gold);
+    box-shadow: 0 0 0 3px rgba(201, 162, 39, 0.2);
+  }
+
+  label {
+    @apply block text-sm font-bold mb-1 text-blush-900;
+  }
 }
 
-body {
-  font-family: "Georgia", "Garamond", serif;
-  background: linear-gradient(135deg, #f3e8ff 0%, #fef3c7 100%);
-  color: #2d1b4e;
-}
+@layer components {
+  /* Buttons */
+  .btn-primary {
+    @apply inline-flex items-center justify-center px-6 py-2.5 rounded-full font-bold text-white transition-all;
+    background: var(--rose-gradient);
+    box-shadow: 0 6px 16px -6px rgba(194, 24, 91, 0.6);
+  }
+  .btn-primary:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 22px -8px rgba(194, 24, 91, 0.7);
+  }
 
-/* Salon theme colors */
-.salon-bg {
-  background: linear-gradient(135deg, #f3e8ff 0%, #e9d5ff 50%, #fef3c7 100%);
-}
+  .btn-gold {
+    @apply inline-flex items-center justify-center px-6 py-2.5 rounded-full font-bold transition-all;
+    background: var(--gold-gradient);
+    color: var(--plum);
+    box-shadow: 0 6px 16px -6px rgba(168, 132, 28, 0.6);
+  }
+  .btn-gold:hover:not(:disabled) {
+    transform: translateY(-2px);
+    filter: brightness(1.05);
+  }
 
-.salon-primary {
-  background-color: #c084fc;
-  color: white;
-}
+  .btn-secondary {
+    @apply inline-flex items-center justify-center px-6 py-2.5 rounded-full font-bold border-2 transition-all;
+    color: var(--rose-deep);
+    border-color: var(--gold);
+    background: rgba(255, 255, 255, 0.85);
+  }
+  .btn-secondary:hover:not(:disabled) {
+    background: #fdf9ec;
+  }
 
-.salon-accent {
-  background-color: #d4af37;
-  color: #2d1b4e;
-}
+  .chip {
+    @apply px-5 py-2 rounded-full font-bold text-sm border-2 transition-all;
+    border-color: #f0dc97;
+    color: var(--rose-deep);
+    background: white;
+  }
+  .chip:hover {
+    border-color: var(--gold);
+  }
+  .chip-active {
+    @apply px-5 py-2 rounded-full font-bold text-sm border-2 text-white transition-all;
+    border-color: transparent;
+    background: var(--rose-gradient);
+  }
 
-/* Elegant buttons */
-.btn-primary {
-  @apply px-6 py-2 rounded-lg font-semibold text-white transition-all;
-  background: linear-gradient(135deg, #c084fc 0%, #a855f7 100%);
-}
+  /* Cards */
+  .card {
+    @apply rounded-2xl p-6 transition-all bg-white/95 shadow-soft;
+    border: 1px solid rgba(240, 220, 151, 0.6);
+  }
+  .card-hover:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 18px 36px -14px rgba(194, 24, 91, 0.35);
+    border-color: var(--gold);
+  }
 
-.btn-primary:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(192, 132, 252, 0.3);
-}
+  /* Gold hairline divider used under headings */
+  .gold-rule {
+    @apply mx-auto my-4 h-0.5 w-24 rounded-full;
+    background: var(--gold-gradient);
+  }
 
-.btn-secondary {
-  @apply px-6 py-2 rounded-lg font-semibold text-purple-900 border-2 border-purple-300 transition-all;
-  background: rgba(255, 255, 255, 0.8);
-}
+  .text-gold-gradient {
+    background: var(--gold-gradient);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
 
-.btn-secondary:hover {
-  background: white;
-  border-color: #c084fc;
-}
+  .price {
+    @apply font-elegant text-2xl font-bold text-blush-600;
+  }
 
-/* Cards */
-.card {
-  @apply rounded-xl shadow-lg transition-all p-6;
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
-}
+  /* Navigation */
+  .nav-link {
+    @apply px-4 py-2 rounded-full font-bold text-sm transition-all text-blush-800;
+  }
+  .nav-link:hover {
+    @apply bg-blush-100 text-blush-600;
+  }
+  .nav-link-active {
+    @apply px-4 py-2 rounded-full font-bold text-sm text-white;
+    background: var(--rose-gradient);
+  }
 
-.card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 12px 24px rgba(192, 132, 252, 0.2);
-}
-
-/* Headers */
-h1, h2, h3 {
-  color: #6b21a8;
-  font-weight: 600;
-}
-
-h1 {
-  font-size: 2.5rem;
-  margin-bottom: 1rem;
-}
-
-h2 {
-  font-size: 1.875rem;
-  margin-bottom: 0.75rem;
-}
-
-h3 {
-  font-size: 1.5rem;
-  margin-bottom: 0.5rem;
-}
-
-/* Forms */
-input, textarea, select {
-  @apply w-full px-4 py-3 border-2 border-purple-200 rounded-lg transition-all;
-  background: rgba(255, 255, 255, 0.9);
-  font-family: "Georgia", "Garamond", serif;
-}
-
-input:focus, textarea:focus, select:focus {
-  outline: none;
-  border-color: #c084fc;
-  box-shadow: 0 0 0 3px rgba(192, 132, 252, 0.1);
-}
-
-/* Navigation */
-nav {
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-}
-
-nav a {
-  @apply px-4 py-2 rounded-lg transition-all;
-  color: #6b21a8;
-  font-weight: 500;
-}
-
-nav a:hover {
-  background: #f3e8ff;
-  color: #9333ea;
-}
-
-/* Status badges */
-.status-pending {
-  @apply px-3 py-1 rounded-full text-sm font-semibold;
-  background: #fef3c7;
-  color: #92400e;
-}
-
-.status-confirmed {
-  @apply px-3 py-1 rounded-full text-sm font-semibold;
-  background: #d1fae5;
-  color: #065f46;
-}
-
-.status-completed {
-  @apply px-3 py-1 rounded-full text-sm font-semibold;
-  background: #c7d2fe;
-  color: #312e81;
-}
-
-.status-cancelled {
-  @apply px-3 py-1 rounded-full text-sm font-semibold;
-  background: #fee2e2;
-  color: #991b1b;
-}
-
-.status-paid {
-  @apply px-3 py-1 rounded-full text-sm font-semibold;
-  background: #d1fae5;
-  color: #065f46;
+  /* Status badges */
+  .badge {
+    @apply inline-block px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide;
+  }
+  .badge-pending {
+    @apply badge bg-gold-100 text-gold-700;
+  }
+  .badge-paid,
+  .badge-confirmed {
+    @apply badge bg-emerald-100 text-emerald-800;
+  }
+  .badge-cancelled {
+    @apply badge bg-red-100 text-red-800;
+  }
+  .badge-info {
+    @apply badge bg-blush-100 text-blush-700;
+  }
 }

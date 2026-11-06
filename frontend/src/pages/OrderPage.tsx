@@ -1,7 +1,11 @@
 import React, { useState, useEffect } from "react";
-import { CafeItem, CreateOrderRequest } from "../types";
+import { Link } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
+import { CafeItem, CreateOrderRequest, Order } from "../types";
 import { cafeItemsApi, ordersApi } from "../services/api";
 import toast from "react-hot-toast";
+import { apiErrorMessage, formatRand } from "../utils/format";
+import { categoryEmoji } from "./CafePage";
 
 interface CartItem {
   cafeItemId: number;
@@ -14,61 +18,47 @@ export const OrderPage: React.FC = () => {
   const [items, setItems] = useState<CafeItem[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(false);
-  const [orderConfirmed, setOrderConfirmed] = useState(false);
-  const [paymentRef, setPaymentRef] = useState("");
-  const [orderNumber, setOrderNumber] = useState("");
+  const [confirmed, setConfirmed] = useState<Order | null>(null);
   const [customerName, setCustomerName] = useState("");
+  const [notes, setNotes] = useState("");
+  const { user } = useAuth();
 
   useEffect(() => {
-    fetchItems();
+    if (user) setCustomerName((n) => n || user.name);
+  }, [user]);
+
+  useEffect(() => {
+    cafeItemsApi
+      .getAll()
+      .then((data) => setItems(data.filter((i) => !i.isOutOfStock)))
+      .catch((e) => toast.error(apiErrorMessage(e, "Failed to load café items")));
   }, []);
 
-  const fetchItems = async () => {
-    try {
-      const data = await cafeItemsApi.getAll();
-      setItems(data.filter((i) => !i.isOutOfStock));
-    } catch (error) {
-      toast.error("Failed to load café items");
-    }
-  };
-
   const addToCart = (item: CafeItem) => {
-    setCart((prevCart) => {
-      const existing = prevCart.find((c) => c.cafeItemId === item.id);
+    setCart((prev) => {
+      const existing = prev.find((c) => c.cafeItemId === item.id);
       if (existing) {
-        return prevCart.map((c) =>
+        return prev.map((c) =>
           c.cafeItemId === item.id ? { ...c, quantity: c.quantity + 1 } : c
         );
       }
-      return [
-        ...prevCart,
-        {
-          cafeItemId: item.id,
-          name: item.name,
-          price: item.price,
-          quantity: 1,
-        },
-      ];
+      return [...prev, { cafeItemId: item.id, name: item.name, price: item.price, quantity: 1 }];
     });
-    toast.success(`${item.name} added to order`);
-  };
-
-  const removeFromCart = (cafeItemId: number) => {
-    setCart((prevCart) =>
-      prevCart.filter((c) => c.cafeItemId !== cafeItemId)
-    );
+    toast.success(`${item.name} added`);
   };
 
   const updateQuantity = (cafeItemId: number, quantity: number) => {
-    if (quantity <= 0) {
-      removeFromCart(cafeItemId);
-      return;
-    }
-    setCart((prevCart) =>
-      prevCart.map((c) =>
-        c.cafeItemId === cafeItemId ? { ...c, quantity } : c
-      )
+    setCart((prev) =>
+      quantity <= 0
+        ? prev.filter((c) => c.cafeItemId !== cafeItemId)
+        : prev.map((c) => (c.cafeItemId === cafeItemId ? { ...c, quantity } : c))
     );
+  };
+
+  const resetOrder = () => {
+    setConfirmed(null);
+    setCart([]);
+    setNotes("");
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -77,56 +67,71 @@ export const OrderPage: React.FC = () => {
       toast.error("Please add items to your order");
       return;
     }
-
     setLoading(true);
-
     try {
       const order: CreateOrderRequest = {
-        customerName,
-        items: cart.map((c) => ({
-          cafeItemId: c.cafeItemId,
-          quantity: c.quantity,
-        })),
+        customerName: customerName.trim(),
+        items: cart.map((c) => ({ cafeItemId: c.cafeItemId, quantity: c.quantity })),
+        notes: notes.trim() || undefined,
       };
-
       const result = await ordersApi.create(order);
-      setPaymentRef(result.paymentReference);
-      setOrderNumber(result.orderNumber);
-      setOrderConfirmed(true);
-      toast.success("Order created successfully!");
+      setConfirmed(result);
+      toast.success("Order placed!");
     } catch (error) {
-      toast.error("Failed to create order");
+      toast.error(apiErrorMessage(error, "Failed to create order"));
     } finally {
       setLoading(false);
     }
   };
 
   const totalAmount = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const itemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
-  if (orderConfirmed) {
+  if (confirmed) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-50 py-12">
+      <div className="py-12">
         <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="card text-center">
-            <div className="text-5xl mb-4">✓</div>
-            <h1 className="text-3xl font-bold mb-4 text-green-600">
-              Order Confirmed!
-            </h1>
-            <div className="bg-amber-50 p-6 rounded-lg mb-6">
-              <p className="text-lg font-semibold mb-2">Order Number:</p>
-              <p className="text-2xl font-bold text-amber-600">{orderNumber}</p>
-              <p className="text-lg font-semibold mt-4 mb-2">Payment Reference:</p>
-              <p className="text-2xl font-bold text-amber-600">{paymentRef}</p>
-              <p className="text-sm text-gray-600 mt-4">
-                Please transfer R{totalAmount.toFixed(2)} via EFT using this reference number.
+            <div className="mx-auto mb-4 h-16 w-16 rounded-full flex items-center justify-center text-3xl text-white bg-gradient-to-br from-gold-300 to-gold-600">
+              ✓
+            </div>
+            <h1 className="text-4xl mb-6">Order Confirmed!</h1>
+            <div className="rounded-xl p-6 mb-6 bg-blush-50 border border-gold-200 grid grid-cols-1 sm:grid-cols-2 gap-6">
+              <div>
+                <p className="text-sm uppercase tracking-widest font-bold text-gold-700 mb-1">
+                  Order Number
+                </p>
+                <p className="font-elegant text-3xl font-bold text-blush-600">
+                  {confirmed.orderNumber}
+                </p>
+              </div>
+              <div>
+                <p className="text-sm uppercase tracking-widest font-bold text-gold-700 mb-1">
+                  Payment Reference
+                </p>
+                <p className="font-elegant text-3xl font-bold text-blush-600">
+                  {confirmed.paymentReference}
+                </p>
+              </div>
+              <p className="sm:col-span-2 text-sm text-blush-900/70">
+                Please transfer <strong>{formatRand(confirmed.totalAmount)}</strong> via EFT
+                using this reference number.
               </p>
             </div>
-            <p className="text-gray-600 mb-6">
-              Your order will be prepared once payment is received. Check your order status at the counter.
+            <p className="text-blush-900/70 mb-6">
+              Your order will be prepared once payment is received. Check your order status at
+              the counter.
             </p>
-            <a href="/order" className="btn-primary">
-              Place Another Order
-            </a>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              {user && (
+                <Link to="/account" className="btn-secondary">
+                  Track in My Account
+                </Link>
+              )}
+              <button onClick={resetOrder} className="btn-primary">
+                Place Another Order
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -134,47 +139,58 @@ export const OrderPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-50 py-12">
+    <div className="py-12">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-        <h1 className="text-4xl font-bold text-center mb-12">In-Salon Order</h1>
+        <h1 className="text-5xl text-center">In-Salon Order</h1>
+        <div className="gold-rule mb-10" />
+
+        {!user && (
+          <p className="mb-6 rounded-xl px-4 py-3 bg-gold-50 border border-gold-200 text-sm text-center">
+            <Link to="/login" state={{ from: "/order" }} className="font-bold text-blush-600 hover:underline">
+              Sign in or create an account
+            </Link>{" "}
+            to keep track of your orders — or continue as a guest.
+          </p>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Menu Items */}
-          <div className="lg:col-span-2">
-            <div className="grid grid-cols-2 gap-4">
-              {items.map((item) => (
-                <div key={item.id} className="card cursor-pointer hover:shadow-xl">
-                  {item.imageUrl && (
-                    <div className="mb-3 h-32 bg-gradient-to-br from-amber-200 to-orange-200 rounded-lg overflow-hidden">
-                      <img
-                        src={item.imageUrl}
-                        alt={item.name}
-                        className="w-full h-full object-cover"
-                      />
+          {/* Menu */}
+          <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4 content-start">
+            {items.map((item) => {
+              const inCart = cart.find((c) => c.cafeItemId === item.id)?.quantity ?? 0;
+              return (
+                <div key={item.id} className="card card-hover p-5 flex gap-4">
+                  <div className="h-16 w-16 shrink-0 rounded-xl flex items-center justify-center text-3xl bg-gradient-to-br from-gold-100 to-blush-100">
+                    {categoryEmoji[item.category] ?? "☕"}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-xl mb-0.5">{item.name}</h3>
+                    <p className="text-sm text-blush-900/70 mb-3">{item.description}</p>
+                    <div className="flex justify-between items-center">
+                      <p className="font-elegant text-xl font-bold text-blush-600">
+                        {formatRand(item.price)}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => addToCart(item)}
+                        className="btn-gold text-sm px-4 py-1.5"
+                      >
+                        {inCart ? `Add · ${inCart}` : "Add"}
+                      </button>
                     </div>
-                  )}
-                  <h3 className="font-bold mb-1">{item.name}</h3>
-                  <p className="text-sm text-gray-600 mb-3">{item.description}</p>
-                  <div className="flex justify-between items-center">
-                    <p className="font-bold text-amber-600">
-                      R{item.price.toFixed(2)}
-                    </p>
-                    <button
-                      onClick={() => addToCart(item)}
-                      className="bg-amber-600 text-white px-3 py-1 rounded text-sm font-semibold hover:bg-amber-700"
-                    >
-                      Add
-                    </button>
                   </div>
                 </div>
-              ))}
-            </div>
+              );
+            })}
           </div>
 
-          {/* Order Summary */}
-          <div className="lg:col-span-1">
-            <form onSubmit={handleSubmit} className="card sticky top-4 space-y-4">
-              <h2 className="text-xl font-bold">Your Order</h2>
+          {/* Summary */}
+          <div>
+            <form onSubmit={handleSubmit} className="card lg:sticky lg:top-28 space-y-4">
+              <h2 className="text-2xl">
+                Your Order{" "}
+                {itemCount > 0 && <span className="badge-info align-middle">{itemCount}</span>}
+              </h2>
 
               <input
                 type="text"
@@ -184,61 +200,53 @@ export const OrderPage: React.FC = () => {
                 onChange={(e) => setCustomerName(e.target.value)}
               />
 
-              {/* Cart Items */}
-              <div className="space-y-3 border-t border-b py-4">
+              <div className="space-y-3 border-y border-gold-100 py-4">
                 {cart.length === 0 ? (
-                  <p className="text-gray-600 text-center py-4">No items added</p>
+                  <p className="text-blush-900/60 text-center py-4">No items added yet</p>
                 ) : (
                   cart.map((item) => (
-                    <div
-                      key={item.cafeItemId}
-                      className="flex justify-between items-center"
-                    >
-                      <div className="flex-1">
-                        <p className="font-semibold">{item.name}</p>
-                        <p className="text-sm text-gray-600">
-                          R{item.price.toFixed(2)} x{" "}
-                          <input
-                            type="number"
-                            min="1"
-                            value={item.quantity}
-                            onChange={(e) =>
-                              updateQuantity(
-                                item.cafeItemId,
-                                parseInt(e.target.value)
-                              )
-                            }
-                            className="w-12 border border-gray-300 rounded px-2 py-1"
-                          />
-                        </p>
+                    <div key={item.cafeItemId} className="flex justify-between items-center gap-3">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-bold truncate">{item.name}</p>
+                        <p className="text-sm text-blush-900/60">{formatRand(item.price)} each</p>
                       </div>
-                      <div className="text-right">
-                        <p className="font-bold">
-                          R{(item.price * item.quantity).toFixed(2)}
-                        </p>
+                      <div className="flex items-center gap-1">
                         <button
                           type="button"
-                          onClick={() => removeFromCart(item.cafeItemId)}
-                          className="text-red-600 text-sm hover:underline"
+                          aria-label={`Remove one ${item.name}`}
+                          onClick={() => updateQuantity(item.cafeItemId, item.quantity - 1)}
+                          className="h-7 w-7 rounded-full border border-gold-300 text-blush-700 font-bold hover:bg-blush-50"
                         >
-                          Remove
+                          −
+                        </button>
+                        <span className="w-6 text-center font-bold">{item.quantity}</span>
+                        <button
+                          type="button"
+                          aria-label={`Add one ${item.name}`}
+                          onClick={() => updateQuantity(item.cafeItemId, item.quantity + 1)}
+                          className="h-7 w-7 rounded-full border border-gold-300 text-blush-700 font-bold hover:bg-blush-50"
+                        >
+                          +
                         </button>
                       </div>
+                      <p className="w-20 text-right font-bold">
+                        {formatRand(item.price * item.quantity)}
+                      </p>
                     </div>
                   ))
                 )}
               </div>
 
-              {/* Total */}
-              <div className="bg-amber-50 p-4 rounded-lg">
-                <div className="flex justify-between mb-2">
-                  <span>Subtotal:</span>
-                  <span>R{totalAmount.toFixed(2)}</span>
-                </div>
-                <div className="text-lg font-bold flex justify-between">
-                  <span>Total:</span>
-                  <span className="text-amber-600">R{totalAmount.toFixed(2)}</span>
-                </div>
+              <textarea
+                placeholder="Notes (e.g. oat milk, no sugar)"
+                rows={2}
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+              />
+
+              <div className="rounded-xl p-4 bg-gold-50 border border-gold-200 flex justify-between items-center">
+                <span className="font-bold">Total</span>
+                <span className="price">{formatRand(totalAmount)}</span>
               </div>
 
               <button
@@ -246,7 +254,7 @@ export const OrderPage: React.FC = () => {
                 disabled={loading || cart.length === 0}
                 className="btn-primary w-full disabled:opacity-50"
               >
-                {loading ? "Processing..." : "Confirm Order"}
+                {loading ? "Processing…" : "Confirm Order"}
               </button>
             </form>
           </div>

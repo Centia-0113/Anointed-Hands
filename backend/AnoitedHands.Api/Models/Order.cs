@@ -10,9 +10,10 @@ public class Order
     public bool IsPaid { get; set; } = false;
     public decimal TotalAmount { get; set; }
     public string? Notes { get; set; }
+    public int? UserId { get; set; } // set when ordered by a signed-in customer
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? CompletedAt { get; set; }
-    
+
     // Items in order
     public ICollection<OrderItem> Items { get; set; } = new List<OrderItem>();
 }
@@ -24,7 +25,7 @@ public class OrderItem
     public int CafeItemId { get; set; }
     public int Quantity { get; set; }
     public decimal Price { get; set; }
-    
+
     // Navigation
     public Order? Order { get; set; }
     public CafeItem? CafeItem { get; set; }

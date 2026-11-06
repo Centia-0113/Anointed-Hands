@@ -9,3 +9,5 @@ obj/
 appsettings.Development.json
 *.log
 *.db
+*.db-shm
+*.db-wal
