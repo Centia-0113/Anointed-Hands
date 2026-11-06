@@ -33,7 +33,9 @@ public class BookingsController : ControllerBase
     private async Task<int?> StaffStylistIdAsync()
     {
         if (!User.IsInRole(Roles.Stylist)) return null;
-        return (await _auth.GetUserAsync(User.UserId()!.Value))?.StylistId;
+        var user = await _auth.GetUserAsync(User.UserId()!.Value);
+        // A stylist still on a temporary password gets no access to client bookings (-1 matches nothing)
+        return user == null || user.MustChangePassword ? -1 : user.StylistId;
     }
 
     private async Task<bool> CanAccessAsync(int bookingId)

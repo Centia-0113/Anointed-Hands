@@ -172,6 +172,7 @@ public class AuthService : IAuthService
             throw new AuthException("Please choose a password different from your current one.");
 
         SetPassword(user, dto.NewPassword);
+        user.MustChangePassword = false; // temporary password replaced
         await _context.SaveChangesAsync();
 
         // Other devices are signed out (token version bumped); this one gets a fresh token
@@ -239,6 +240,7 @@ public class AuthService : IAuthService
 
         var user = record.User!;
         SetPassword(user, dto.NewPassword);
+        user.MustChangePassword = false;
         user.EmailConfirmed = true; // they proved they control the inbox
         user.FailedLoginCount = 0;
         user.LockoutEndUtc = null;
@@ -350,6 +352,7 @@ public class AuthService : IAuthService
         Phone = u.Phone,
         Role = u.Role,
         EmailConfirmed = u.EmailConfirmed,
+        MustChangePassword = u.MustChangePassword,
         StylistId = u.StylistId,
     };
 

@@ -118,6 +118,8 @@ export interface User {
   role: "Admin" | "Customer" | "Stylist";
   emailConfirmed: boolean;
   stylistId?: number | null;
+  /** Staff still on the temporary password the admin gave them. */
+  mustChangePassword?: boolean;
 }
 
 export interface AuthResponse {
@@ -184,6 +186,7 @@ export interface StylistAdmin extends Stylist {
   email: string;
   phoneNumber?: string | null;
   loginEmail?: string | null;
+  hasTemporaryPassword: boolean;
 }
 
 export interface SaveService {

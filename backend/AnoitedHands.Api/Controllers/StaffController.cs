@@ -21,19 +21,32 @@ public class StaffController : ControllerBase
         _auth = auth;
     }
 
-    private async Task<int?> StylistIdAsync() => (await _auth.GetUserAsync(User.UserId()!.Value))?.StylistId;
+    public static readonly object PasswordChangeRequired = new
+    {
+        message = "Please set your own password before viewing client details.",
+        code = "password_change_required",
+    };
+
+    /// <summary>Stylist id, or an error result if the account isn't a usable staff login yet.</summary>
+    private async Task<(int? StylistId, ActionResult? Error)> ResolveAsync()
+    {
+        var user = await _auth.GetUserAsync(User.UserId()!.Value);
+        if (user?.StylistId == null) return (null, Forbid());
+        if (user.MustChangePassword) return (null, StatusCode(StatusCodes.Status403Forbidden, PasswordChangeRequired));
+        return (user.StylistId, null);
+    }
 
     [HttpGet("bookings")]
     public async Task<ActionResult<List<BookingDto>>> MyBookings()
     {
-        var id = await StylistIdAsync();
-        return id == null ? Forbid() : Ok(await _bookings.GetBookingsForStylistAsync(id.Value));
+        var (id, error) = await ResolveAsync();
+        return error ?? Ok(await _bookings.GetBookingsForStylistAsync(id!.Value));
     }
 
     [HttpGet("clients")]
     public async Task<ActionResult<List<StaffClientDto>>> MyClients()
     {
-        var id = await StylistIdAsync();
-        return id == null ? Forbid() : Ok(await _bookings.GetClientsForStylistAsync(id.Value));
+        var (id, error) = await ResolveAsync();
+        return error ?? Ok(await _bookings.GetClientsForStylistAsync(id!.Value));
     }
 }

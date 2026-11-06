@@ -418,13 +418,72 @@ export const AdminCatalog: React.FC = () => {
 
 // ====================================================================== Staff
 
-type StylistForm = { id?: number; name: string; specialization: string; email: string; phoneNumber: string; isActive: boolean };
+type StylistForm = {
+  id?: number;
+  name: string;
+  specialization: string;
+  email: string;
+  phoneNumber: string;
+  isActive: boolean;
+  // new employees only
+  createLogin: boolean;
+  loginEmail: string;
+  temporaryPassword: string;
+};
+
+/** Random temporary password, e.g. "Kp7mQx2aRt" (no look-alike characters). */
+const randomPassword = () => {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789";
+  const arr = new Uint32Array(10);
+  window.crypto.getRandomValues(arr);
+  return Array.from(arr, (n) => chars[n % chars.length]).join("");
+};
+
+/** Shown once after a login is created/reset so the admin can hand over the details. */
+const CredentialsCard: React.FC<{ name: string; email: string; password: string; onClose: () => void }> = ({ name, email, password, onClose }) => {
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(
+        `Anointed Hands staff login\nWebsite: ${window.location.origin}/login\nEmail: ${email}\nTemporary password: ${password}\nYou'll be asked to choose your own password when you first sign in.`
+      );
+      toast.success("Login details copied");
+    } catch {
+      toast.error("Couldn't copy – please write them down");
+    }
+  };
+  return (
+    <div className="rounded-2xl p-6 bg-gradient-to-br from-gold-300 to-gold-500 text-blush-900 shadow-gold">
+      <p className="text-xs font-bold uppercase tracking-widest mb-1">Give these details to {name.split(" ")[0]}</p>
+      <dl className="grid grid-cols-[auto,1fr] gap-x-4 gap-y-1 text-lg">
+        <dt className="font-bold">Sign in at</dt>
+        <dd className="font-mono break-all">{window.location.origin}/login</dd>
+        <dt className="font-bold">Email</dt>
+        <dd className="font-mono break-all">{email}</dd>
+        <dt className="font-bold">Temporary password</dt>
+        <dd className="font-mono text-2xl font-bold tracking-wider">{password}</dd>
+      </dl>
+      <p className="text-sm mt-3">
+        They'll be asked to choose their own password the first time they sign in. This password won't be shown again – if it's lost,
+        use <strong>Reset password</strong>.
+      </p>
+      <div className="flex gap-3 mt-4">
+        <button onClick={copy} className="px-5 py-2 rounded-full font-bold bg-blush-900 text-gold-200 hover:bg-blush-800">
+          Copy details
+        </button>
+        <button onClick={onClose} className="px-5 py-2 rounded-full font-bold border-2 border-blush-900 hover:bg-white/20">
+          Done
+        </button>
+      </div>
+    </div>
+  );
+};
 
 export const AdminStaff: React.FC = () => {
   const [stylists, setStylists] = useState<StylistAdmin[]>([]);
   const [form, setForm] = useState<StylistForm | null>(null);
-  const [loginFor, setLoginFor] = useState<StylistAdmin | null>(null);
-  const [login, setLogin] = useState({ email: "", password: "" });
+  const [resetFor, setResetFor] = useState<StylistAdmin | null>(null);
+  const [reset, setReset] = useState({ email: "", password: "" });
+  const [issued, setIssued] = useState<{ name: string; email: string; password: string } | null>(null);
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(
@@ -435,15 +494,39 @@ export const AdminStaff: React.FC = () => {
     load();
   }, [load]);
 
+  const newEmployee = () => {
+    setIssued(null);
+    setResetFor(null);
+    setForm({
+      name: "",
+      specialization: "",
+      email: "",
+      phoneNumber: "",
+      isActive: true,
+      createLogin: true,
+      loginEmail: "",
+      temporaryPassword: randomPassword(),
+    });
+  };
+
   const save = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form) return;
     setBusy(true);
     try {
       const body = { name: form.name, specialization: form.specialization, email: form.email, phoneNumber: form.phoneNumber, isActive: form.isActive };
-      if (form.id) await stylistsApi.update(form.id, body);
-      else await stylistsApi.create(body);
-      toast.success(form.id ? "Staff member updated" : "Staff member added");
+      if (form.id) {
+        await stylistsApi.update(form.id, body);
+        toast.success("Employee updated");
+      } else if (form.createLogin) {
+        const loginEmail = form.loginEmail || form.email;
+        await stylistsApi.create({ ...body, loginEmail, temporaryPassword: form.temporaryPassword });
+        setIssued({ name: form.name, email: loginEmail.trim().toLowerCase(), password: form.temporaryPassword });
+        toast.success(`${form.name.split(" ")[0]} added with a login`);
+      } else {
+        await stylistsApi.create(body);
+        toast.success("Employee added (no login yet)");
+      }
       setForm(null);
       await load();
     } catch (error) {
@@ -453,17 +536,18 @@ export const AdminStaff: React.FC = () => {
     }
   };
 
-  const createLogin = async (e: React.FormEvent) => {
+  const saveReset = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!loginFor) return;
+    if (!resetFor) return;
     setBusy(true);
     try {
-      const res = await stylistsApi.createAccount(loginFor.id, login.email, login.password);
-      toast.success(res.message, { duration: 6000 });
-      setLoginFor(null);
+      await stylistsApi.createAccount(resetFor.id, reset.email, reset.password);
+      setIssued({ name: resetFor.name, email: reset.email.trim().toLowerCase(), password: reset.password });
+      toast.success(resetFor.loginEmail ? "Temporary password set – they've been signed out" : "Login created");
+      setResetFor(null);
       await load();
     } catch (error) {
-      toast.error(apiErrorMessage(error, "Couldn't create the login"));
+      toast.error(apiErrorMessage(error, "Couldn't save the login"));
     } finally {
       setBusy(false);
     }
@@ -480,30 +564,25 @@ export const AdminStaff: React.FC = () => {
     }
   };
 
-  const randomPassword = () => {
-    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789";
-    const arr = new Uint32Array(10);
-    window.crypto.getRandomValues(arr);
-    return Array.from(arr, (n) => chars[n % chars.length]).join("");
-  };
-
   return (
     <div className="space-y-6">
       <div className="flex justify-between flex-wrap gap-3">
         <p className="text-blush-100 max-w-2xl">
-          Each stylist can get their own login to see the clients who booked them, their schedule and visit history. They only see their own
-          appointments.
+          Only you can add employees and create their logins. Each employee gets a <strong>temporary password</strong> from you and must
+          choose their own when they first sign in. They then see only their own appointments and clients.
         </p>
-        <button onClick={() => setForm({ name: "", specialization: "", email: "", phoneNumber: "", isActive: true })} className="btn-gold text-sm">
-          + Add Staff Member
+        <button onClick={newEmployee} className="btn-gold text-sm">
+          + Add Employee
         </button>
       </div>
 
+      {issued && <CredentialsCard {...issued} onClose={() => setIssued(null)} />}
+
       {form && (
         <form onSubmit={save} className={`${panel} grid grid-cols-1 md:grid-cols-2 gap-4`}>
-          <h3 className="md:col-span-2 text-2xl text-gold-300">{form.id ? "Edit Staff Member" : "New Staff Member"}</h3>
+          <h3 className="md:col-span-2 text-2xl text-gold-300">{form.id ? "Edit Employee" : "New Employee"}</h3>
           <div>
-            <label className={label}>Name</label>
+            <label className={label}>Full name</label>
             <input className={input} required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
           </div>
           <div>
@@ -522,9 +601,51 @@ export const AdminStaff: React.FC = () => {
             <input type="checkbox" className="!w-5 !h-5 accent-pink-600" checked={form.isActive} onChange={(e) => setForm({ ...form, isActive: e.target.checked })} />
             Taking bookings
           </label>
+
+          {!form.id && (
+            <div className="md:col-span-2 rounded-xl p-4 ring-1 ring-gold-500/40 bg-white/5 space-y-4">
+              <label className="flex items-center gap-2 !text-gold-200 !mb-0 cursor-pointer">
+                <input type="checkbox" className="!w-5 !h-5 accent-pink-600" checked={form.createLogin} onChange={(e) => setForm({ ...form, createLogin: e.target.checked })} />
+                Create their login now
+              </label>
+              {form.createLogin && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className={label}>Login email</label>
+                    <input
+                      className={input}
+                      type="email"
+                      required
+                      placeholder={form.email || "name@anointedhands.co.za"}
+                      value={form.loginEmail}
+                      onFocus={() => !form.loginEmail && form.email && setForm({ ...form, loginEmail: form.email })}
+                      onChange={(e) => setForm({ ...form, loginEmail: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <label className={label}>Temporary password</label>
+                    <div className="flex gap-2">
+                      <input
+                        className={`${input} font-mono`}
+                        required
+                        minLength={8}
+                        value={form.temporaryPassword}
+                        onChange={(e) => setForm({ ...form, temporaryPassword: e.target.value })}
+                      />
+                      <button type="button" onClick={() => setForm({ ...form, temporaryPassword: randomPassword() })} className={ghostBtn}>
+                        New
+                      </button>
+                    </div>
+                    <p className="text-xs text-blush-200/70 mt-1">At least 8 characters. They'll replace it at first sign-in.</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           <div className="md:col-span-2 flex gap-3">
             <button type="submit" disabled={busy} className="btn-gold disabled:opacity-50">
-              {busy ? "Saving…" : "Save"}
+              {busy ? "Saving…" : form.id ? "Save Changes" : "Add Employee"}
             </button>
             <button type="button" onClick={() => setForm(null)} className={ghostBtn}>
               Cancel
@@ -533,35 +654,37 @@ export const AdminStaff: React.FC = () => {
         </form>
       )}
 
-      {loginFor && (
-        <form onSubmit={createLogin} className={`${panel} grid grid-cols-1 md:grid-cols-[1fr,1fr,auto] gap-4 items-end`}>
+      {resetFor && (
+        <form onSubmit={saveReset} className={`${panel} grid grid-cols-1 md:grid-cols-[1fr,1fr,auto] gap-4 items-end`}>
           <h3 className="md:col-span-3 text-2xl text-gold-300">
-            {loginFor.loginEmail ? "Reset" : "Create"} login for {loginFor.name}
+            {resetFor.loginEmail ? `Reset password for ${resetFor.name}` : `Create login for ${resetFor.name}`}
           </h3>
           <div>
             <label className={label}>Login email</label>
-            <input className={input} type="email" required value={login.email} onChange={(e) => setLogin({ ...login, email: e.target.value })} />
+            <input className={input} type="email" required value={reset.email} onChange={(e) => setReset({ ...reset, email: e.target.value })} />
           </div>
           <div>
-            <label className={label}>Temporary password</label>
+            <label className={label}>New temporary password</label>
             <div className="flex gap-2">
-              <input className={`${input} font-mono`} required minLength={8} value={login.password} onChange={(e) => setLogin({ ...login, password: e.target.value })} />
-              <button type="button" onClick={() => setLogin({ ...login, password: randomPassword() })} className={ghostBtn}>
-                Generate
+              <input className={`${input} font-mono`} required minLength={8} value={reset.password} onChange={(e) => setReset({ ...reset, password: e.target.value })} />
+              <button type="button" onClick={() => setReset({ ...reset, password: randomPassword() })} className={ghostBtn}>
+                New
               </button>
             </div>
           </div>
           <div className="flex gap-2">
             <button type="submit" disabled={busy} className="btn-gold disabled:opacity-50">
-              {busy ? "Saving…" : "Save Login"}
+              {busy ? "Saving…" : "Save"}
             </button>
-            <button type="button" onClick={() => setLoginFor(null)} className={ghostBtn}>
+            <button type="button" onClick={() => setResetFor(null)} className={ghostBtn}>
               Cancel
             </button>
           </div>
-          <p className="md:col-span-3 text-xs text-blush-200/70">
-            Share the temporary password with them in person; they can change it under Account Settings on their schedule page.
-          </p>
+          {resetFor.loginEmail && (
+            <p className="md:col-span-3 text-xs text-blush-200/70">
+              They'll be signed out everywhere and must choose a new password at their next sign-in.
+            </p>
+          )}
         </form>
       )}
 
@@ -578,24 +701,53 @@ export const AdminStaff: React.FC = () => {
             <p className="text-xs text-blush-200/80 mt-2">
               {s.email || "No email"} {s.phoneNumber ? `· ${s.phoneNumber}` : ""}
             </p>
-            <p className="text-sm mt-3">
-              Login: {s.loginEmail ? <span className="font-mono text-gold-200">{s.loginEmail}</span> : <span className="text-blush-200/60">none</span>}
-            </p>
+            <div className="text-sm mt-3">
+              {s.loginEmail ? (
+                <>
+                  <p>
+                    Login: <span className="font-mono text-gold-200">{s.loginEmail}</span>
+                  </p>
+                  {s.hasTemporaryPassword ? (
+                    <span className="badge-pending mt-1">Temporary password – not signed in yet</span>
+                  ) : (
+                    <span className="badge-paid mt-1">Own password set</span>
+                  )}
+                </>
+              ) : (
+                <p className="text-blush-200/60">No login</p>
+              )}
+            </div>
             <div className="flex flex-wrap gap-3 mt-4">
               <button
-                onClick={() => setForm({ id: s.id, name: s.name, specialization: s.specialization, email: s.email, phoneNumber: s.phoneNumber ?? "", isActive: s.isActive })}
+                onClick={() => {
+                  setIssued(null);
+                  setResetFor(null);
+                  setForm({
+                    id: s.id,
+                    name: s.name,
+                    specialization: s.specialization,
+                    email: s.email,
+                    phoneNumber: s.phoneNumber ?? "",
+                    isActive: s.isActive,
+                    createLogin: false,
+                    loginEmail: "",
+                    temporaryPassword: "",
+                  });
+                }}
                 className="btn-gold text-xs px-3 py-1.5"
               >
                 Edit
               </button>
               <button
                 onClick={() => {
-                  setLoginFor(s);
-                  setLogin({ email: s.loginEmail ?? s.email ?? "", password: randomPassword() });
+                  setIssued(null);
+                  setForm(null);
+                  setResetFor(s);
+                  setReset({ email: s.loginEmail ?? s.email ?? "", password: randomPassword() });
                 }}
                 className="text-xs font-bold text-gold-200 hover:text-white"
               >
-                {s.loginEmail ? "Reset login" : "Create login"}
+                {s.loginEmail ? "Reset password" : "Create login"}
               </button>
               {s.loginEmail && (
                 <button onClick={() => removeLogin(s)} className="text-xs font-bold text-blush-300 hover:text-white">

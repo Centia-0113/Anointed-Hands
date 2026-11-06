@@ -74,6 +74,7 @@ public class StylistAdminDto : StylistDto
     public string Email { get; set; } = string.Empty;
     public string? PhoneNumber { get; set; }
     public string? LoginEmail { get; set; } // staff account linked to this stylist, if any
+    public bool HasTemporaryPassword { get; set; } // hasn't signed in and set their own password yet
 }
 
 public class SaveStylistDto
@@ -83,6 +84,10 @@ public class SaveStylistDto
     public string? Email { get; set; }
     public string? PhoneNumber { get; set; }
     public bool IsActive { get; set; } = true;
+
+    /// <summary>Optional when adding a new staff member: create their login in the same step.</summary>
+    public string? LoginEmail { get; set; }
+    public string? TemporaryPassword { get; set; }
 }
 
 public class CreateStaffAccountDto
@@ -204,6 +209,7 @@ public class UserDto
     public string Role { get; set; } = string.Empty;
     public bool EmailConfirmed { get; set; }
     public int? StylistId { get; set; }
+    public bool MustChangePassword { get; set; }
 }
 
 public class AuthResponseDto

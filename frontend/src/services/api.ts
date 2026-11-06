@@ -138,8 +138,15 @@ export const cafeItemsApi = {
 // Stylists API
 export const stylistsApi = {
   getAllAdmin: async (): Promise<StylistAdmin[]> => (await api.get("/stylists/all")).data,
-  create: async (data: { name: string; specialization: string; email?: string; phoneNumber?: string; isActive: boolean }): Promise<StylistAdmin> =>
-    (await api.post("/stylists", data)).data,
+  create: async (data: {
+    name: string;
+    specialization: string;
+    email?: string;
+    phoneNumber?: string;
+    isActive: boolean;
+    loginEmail?: string;
+    temporaryPassword?: string;
+  }): Promise<StylistAdmin> => (await api.post("/stylists", data)).data,
   update: async (id: number, data: { name: string; specialization: string; email?: string; phoneNumber?: string; isActive: boolean }): Promise<StylistAdmin> =>
     (await api.put(`/stylists/${id}`, data)).data,
   createAccount: async (id: number, email: string, password: string): Promise<{ message: string }> =>

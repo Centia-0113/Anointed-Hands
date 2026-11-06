@@ -143,7 +143,10 @@ dotnet user-secrets set "Smtp:From" "you@gmail.com"
   24 hours (or before the appointment if sooner), with a scan-to-pay QR. A background job releases unpaid bookings (*Expired*) every
   5 minutes and emails the client. The admin marks *Deposit Paid* / *Paid in Full*; cancelling after payment marks a *Refund Due*,
   then *Mark Refunded*. The balance is paid at the appointment (scan-to-pay available in *My Bookings*).
-- **Staff** (*Admin → Staff*) - add stylists and give each a login. Stylists sign in to **My Schedule** (`/staff`) to see only
+- **Staff** (*Admin → Staff*) - only the admin can add employees and create their logins (public sign-up only creates client
+  accounts). *Add Employee* creates the profile and login in one step with a temporary password; the admin hands over the
+  details, and the employee must choose their own password at first sign-in before they can see any client data (enforced by
+  the API). *Reset password* issues a new temporary password and signs them out everywhere. Stylists sign in to **My Schedule** (`/staff`) to see only
   their own appointments (client phone, email, notes, payment status), mark visits *Completed* / *No Show*, and browse
   **My Clients** with visit history, next appointment and total spent.
 

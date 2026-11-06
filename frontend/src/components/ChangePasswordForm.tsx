@@ -6,7 +6,7 @@ import { apiErrorMessage } from "../utils/format";
 
 /** Change-password form for any signed-in user. Other devices are signed out afterwards. */
 export const ChangePasswordForm: React.FC<{ dark?: boolean }> = ({ dark }) => {
-  const { setSession } = useAuth();
+  const { setSession, user } = useAuth();
   const [form, setForm] = useState({ current: "", next: "", confirm: "" });
   const [busy, setBusy] = useState(false);
 
@@ -21,7 +21,9 @@ export const ChangePasswordForm: React.FC<{ dark?: boolean }> = ({ dark }) => {
       const res = await authApi.changePassword(form.current, form.next);
       setSession(res.token, res.user);
       setForm({ current: "", next: "", confirm: "" });
-      toast.success("Password changed. Other devices have been signed out.");
+      toast.success(
+        user?.mustChangePassword ? "Your password is set – welcome aboard!" : "Password changed. Other devices have been signed out."
+      );
     } catch (error) {
       toast.error(apiErrorMessage(error, "Couldn't change password"));
     } finally {
@@ -35,7 +37,9 @@ export const ChangePasswordForm: React.FC<{ dark?: boolean }> = ({ dark }) => {
   return (
     <form onSubmit={submit} className="space-y-4 max-w-md">
       <div>
-        <label htmlFor="cp-current" className={labelClass}>Current password</label>
+        <label htmlFor="cp-current" className={labelClass}>
+          {user?.mustChangePassword ? "Temporary password" : "Current password"}
+        </label>
         <input
           id="cp-current"
           type="password"

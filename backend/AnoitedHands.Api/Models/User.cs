@@ -20,6 +20,9 @@ public class User
     /// <summary>For staff accounts: the stylist profile this login belongs to.</summary>
     public int? StylistId { get; set; }
 
+    /// <summary>True while the user still has a temporary password set by the admin.</summary>
+    public bool MustChangePassword { get; set; }
+
     /// <summary>Bumped on password change/reset; sign-in tokens carrying an older value are rejected.</summary>
     public int TokenVersion { get; set; }
 

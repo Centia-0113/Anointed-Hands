@@ -1,6 +1,7 @@
 import React from "react";
 import { Link, Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { ChangePasswordForm } from "./ChangePasswordForm";
 
 interface Props {
   children: React.ReactElement;
@@ -26,6 +27,25 @@ export const RequireAuth: React.FC<Props> = ({ children, role }) => {
 
   if (!user) {
     return <Navigate to="/login" replace state={{ from: location.pathname }} />;
+  }
+
+  // Staff given a temporary password by the admin must choose their own before going further
+  if (user.mustChangePassword) {
+    return (
+      <div className="py-16 px-4">
+        <div className="max-w-md mx-auto">
+          <h1 className="text-4xl text-center">Welcome, {user.name.split(" ")[0]}!</h1>
+          <div className="gold-rule mb-6" />
+          <div className="card">
+            <p className="mb-5 text-blush-900/80">
+              You're signed in with the <strong>temporary password</strong> the salon gave you. Please choose your own
+              password to continue – only you should know it.
+            </p>
+            <ChangePasswordForm />
+          </div>
+        </div>
+      </div>
+    );
   }
 
   if (role && user.role !== role) {
