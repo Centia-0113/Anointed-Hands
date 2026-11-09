@@ -372,7 +372,7 @@ export const AdminSalonQr: React.FC = () => {
     if (!w) return;
     w.document.write(`<!doctype html><html><head><title>Café QR</title><style>
       body{font-family:Georgia,serif;text-align:center;color:#4a0d29;padding:40px}
-      h1{color:#9e1450;margin:0 0 6px} .gold{height:4px;width:120px;margin:12px auto 24px;background:#c9a227;border-radius:4px}
+      h1{color:#b00048;margin:0 0 6px} .gold{height:4px;width:120px;margin:12px auto 24px;background:#c9a227;border-radius:4px}
       .code{font-family:monospace;font-size:28px;letter-spacing:6px;font-weight:bold;margin-top:18px}
       svg{width:320px;height:320px;padding:16px;border:3px solid #c9a227;border-radius:16px}
     </style></head><body>

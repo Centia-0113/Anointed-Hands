@@ -3,14 +3,14 @@
 @tailwind utilities;
 
 :root {
-  --rose: #c2185b;
-  --rose-deep: #9e1450;
+  --rose: #b00048;
+  --rose-deep: #8f003b;
   --plum: #4a0d29;
   --blush: #fdeef3;
   --gold: #c9a227;
   --gold-light: #f0dc97;
   --gold-gradient: linear-gradient(135deg, #e6c766 0%, #c9a227 50%, #a8841c 100%);
-  --rose-gradient: linear-gradient(135deg, #de5287 0%, #c2185b 100%);
+  --rose-gradient: linear-gradient(135deg, #cf2a6a 0%, #b00048 100%);
 }
 
 @layer base {

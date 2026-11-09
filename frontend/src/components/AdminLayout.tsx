@@ -83,6 +83,7 @@ export const AdminLayout: React.FC = () => {
       {/* Sidebar */}
       <aside className="hidden lg:flex lg:flex-col w-64 shrink-0 border-r border-gold-500/20 bg-black/10 p-5 sticky top-0 h-screen overflow-y-auto">
         <Link to="/admin" className="block mb-8">
+          <img src="/assets/images/logo-mark.png" alt="" className="h-14 w-14 mb-2 -ml-1" />
           <p className="font-elegant text-2xl font-bold text-gold-200 leading-none">{site.businessName}</p>
           <p className="text-[11px] font-bold uppercase tracking-[0.3em] text-blush-300 mt-1">Back Office</p>
         </Link>

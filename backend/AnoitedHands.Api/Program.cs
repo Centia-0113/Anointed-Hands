@@ -162,6 +162,7 @@ using (var scope = app.Services.CreateScope())
     }
 
     await scope.ServiceProvider.GetRequiredService<IAuthService>().EnsureAdminAsync();
+    await GallerySeeder.SeedAsync(dbContext, app.Environment);
 }
 
 // Serves uploaded gallery photos from wwwroot/uploads

@@ -77,8 +77,11 @@ public class GalleryController : ControllerBase
         var item = await _context.GalleryItems.FindAsync(id);
         if (item == null) return NotFound();
 
-        var path = Path.Combine(WebRoot(), item.ImagePath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
-        if (System.IO.File.Exists(path)) System.IO.File.Delete(path);
+        if (item.ImagePath.StartsWith("/uploads/", StringComparison.OrdinalIgnoreCase))
+        {
+            var path = Path.Combine(WebRoot(), item.ImagePath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
+            if (System.IO.File.Exists(path)) System.IO.File.Delete(path);
+        }
 
         _context.GalleryItems.Remove(item);
         await _context.SaveChangesAsync();

@@ -10,10 +10,10 @@ module.exports = {
           200: "#fad5e2",
           300: "#f5b0c8",
           400: "#ec7fa6",
-          500: "#de5287",
-          600: "#c2185b", // primary rose
-          700: "#9e1450",
-          800: "#7a1040",
+          500: "#cf2a6a",
+          600: "#b00048", // primary – raspberry from the logo wordmark
+          700: "#8f003b",
+          800: "#6e0a33",
           900: "#4a0d29", // deep plum-rose for text & footer
         },
         gold: {

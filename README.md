@@ -222,7 +222,9 @@ Weekly opening hours are under *Back Office → Opening Hours*. Changes go live 
 
 ## 🎨 Design
 
-- **Color Scheme**: Blush & rose pinks with warm gold accents (`blush-*` and `gold-*` in `tailwind.config.js`)
+- **Logo**: `frontend/public/assets/images/` – `logo-original.jpg` (master), `logo-full.jpg`, `logo-mark.jpg/.png` (the gold hand), plus favicons in `frontend/public`
+- **Color Scheme**: Raspberry `#b00048` (from the logo) with warm gold accents (`blush-*` and `gold-*` in `tailwind.config.js`)
+- **Gallery photos**: bundled in `backend/AnoitedHands.Api/wwwroot/images/gallery/` and added to the gallery on first run; manage them in *Back Office → Gallery*
 - **Typography**: Cormorant Garamond headings, Lato body text
 - **Currency**: South African Rand (R)
 - **Components**: Card-based layout with smooth transitions

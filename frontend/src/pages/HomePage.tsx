@@ -1,5 +1,7 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { GalleryItem } from "../types";
+import { assetUrl, galleryApi } from "../services/api";
 import { useSite } from "../context/SiteContext";
 import { useAuth } from "../context/AuthContext";
 
@@ -25,6 +27,14 @@ export const HomePage: React.FC = () => {
   const { site } = useSite();
   const { user } = useAuth();
   const isClient = !user || user.role === "Customer";
+  const [work, setWork] = useState<GalleryItem[]>([]);
+
+  useEffect(() => {
+    galleryApi
+      .getAll()
+      .then((items) => setWork(items.slice(0, 6)))
+      .catch(() => undefined);
+  }, []);
   // Highlight the business name in gold if the heading contains it
   const title = site.heroTitle || `Welcome to ${site.businessName}`;
   const nameAt = title.indexOf(site.businessName);
@@ -37,6 +47,7 @@ export const HomePage: React.FC = () => {
         <div className="pointer-events-none absolute -bottom-24 -right-16 h-80 w-80 rounded-full bg-gold-200/60 blur-3xl" />
 
         <div className="relative max-w-4xl mx-auto text-center">
+          <img src="/assets/images/logo-mark.png" alt="" className="mx-auto h-28 w-28 md:h-36 md:w-36 mb-2" />
           {site.tagline && (
             <p className="uppercase tracking-[0.35em] text-xs font-bold text-gold-600 mb-4">{site.tagline}</p>
           )}
@@ -72,6 +83,39 @@ export const HomePage: React.FC = () => {
             <h2 className="text-4xl">About Us</h2>
             <div className="gold-rule mb-6" />
             <p className="text-lg text-blush-900/80 whitespace-pre-line">{site.aboutText}</p>
+          </div>
+        </section>
+      )}
+
+      {work.length > 0 && (
+        <section className="py-14 px-4">
+          <div className="max-w-6xl mx-auto">
+            <h2 className="text-4xl text-center">Our Work</h2>
+            <div className="gold-rule mb-10" />
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              {work.map((item, i) => (
+                <Link
+                  key={item.id}
+                  to="/gallery"
+                  className={`group relative overflow-hidden rounded-2xl ring-1 ring-gold-200 shadow-soft ${i === 0 ? "md:row-span-2" : ""}`}
+                >
+                  <img
+                    src={assetUrl(item.imageUrl)}
+                    alt={item.title}
+                    loading="lazy"
+                    className={`w-full object-cover group-hover:scale-105 transition-transform duration-500 ${i === 0 ? "h-full min-h-[18rem]" : "h-56 md:h-64"}`}
+                  />
+                  <span className="absolute inset-x-0 bottom-0 p-3 text-sm font-bold text-white bg-gradient-to-t from-blush-900/80 to-transparent">
+                    {item.title}
+                  </span>
+                </Link>
+              ))}
+            </div>
+            <div className="text-center mt-8">
+              <Link to="/gallery" className="btn-secondary">
+                See the Full Gallery
+              </Link>
+            </div>
           </div>
         </section>
       )}

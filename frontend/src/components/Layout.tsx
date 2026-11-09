@@ -3,7 +3,7 @@ import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { summariseHours, useSite } from "../context/SiteContext";
 
-const LOGO_URL = "/assets/images/logo.png";
+const LOGO_URL = "/assets/images/logo-mark.jpg";
 
 /** Public navigation: what clients can explore. Booking is a separate call-to-action. */
 const exploreLinks = [
@@ -65,7 +65,7 @@ export const Header: React.FC = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between gap-4">
         <Link to="/" className="flex items-center gap-3 shrink-0" onClick={() => setOpen(false)}>
           {logoOk ? (
-            <img src={LOGO_URL} alt={site.businessName} className="h-11 w-11 rounded-full object-cover ring-2 ring-gold-400" onError={() => setLogoOk(false)} />
+            <img src={LOGO_URL} alt="" className="h-12 w-12 rounded-full object-contain bg-white p-0.5 ring-2 ring-gold-300" onError={() => setLogoOk(false)} />
           ) : (
             <span className="h-11 w-11 rounded-full flex items-center justify-center font-elegant text-xl font-bold text-white bg-gradient-to-br from-blush-500 to-blush-700 ring-2 ring-gold-400">
               {site.businessName
@@ -158,6 +158,7 @@ export const Footer: React.FC = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10">
           <div>
+            <img src="/assets/images/logo-mark.png" alt="" className="h-16 w-16 mb-2 -ml-1" />
             <h3 className="text-2xl mb-3 text-gold-300">{site.businessName}</h3>
             <p className="text-blush-200 text-sm leading-relaxed">{site.aboutText || site.tagline}</p>
           </div>
