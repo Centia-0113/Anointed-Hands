@@ -65,7 +65,7 @@ export const LoginPage: React.FC = () => {
   return (
     <div className="py-16 px-4">
       <div className="max-w-md mx-auto">
-        <img src="/assets/images/logo-full.jpg" alt="Anointed Hands – Salon & Café" className="mx-auto mb-4 h-40 w-40 rounded-full object-cover ring-4 ring-gold-200 shadow-soft" />
+        <img src="/assets/images/logo.jpg" alt="Anointed Hands – Salon & Café" className="mx-auto mb-4 h-48 w-48" />
         <h1 className="text-5xl text-center">{mode === "login" ? "Welcome Back" : "Create Account"}</h1>
         <div className="gold-rule mb-8" />
 

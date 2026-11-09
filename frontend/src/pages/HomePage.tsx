@@ -47,7 +47,7 @@ export const HomePage: React.FC = () => {
         <div className="pointer-events-none absolute -bottom-24 -right-16 h-80 w-80 rounded-full bg-gold-200/60 blur-3xl" />
 
         <div className="relative max-w-4xl mx-auto text-center">
-          <img src="/assets/images/logo-mark.png" alt="" className="mx-auto h-28 w-28 md:h-36 md:w-36 mb-2" />
+          <img src="/assets/images/logo.jpg" alt="" className="mx-auto h-56 w-56 md:h-72 md:w-72 mb-4" />
           {site.tagline && (
             <p className="uppercase tracking-[0.35em] text-xs font-bold text-gold-600 mb-4">{site.tagline}</p>
           )}
