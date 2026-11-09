@@ -36,6 +36,10 @@ builder.Services.AddScoped<ISalonCodeService, SalonCodeService>();
 builder.Services.AddMemoryCache();
 builder.Services.AddScoped<ISiteSettingsService, SiteSettingsService>();
 builder.Services.AddScoped<IScheduleService, ScheduleService>();
+builder.Services.AddHttpClient();
+builder.Services.AddScoped<IPaymentService, PaymentService>();
+builder.Services.AddScoped<IPayFastService, PayFastService>();
+builder.Services.AddScoped<IStatementImporter, StatementImporter>();
 builder.Services.AddHostedService<DepositExpiryService>(); // releases bookings with unpaid deposits
 
 // Rate limiting: sign-in / registration / reset endpoints, per client IP

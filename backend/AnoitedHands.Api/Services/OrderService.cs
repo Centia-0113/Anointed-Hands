@@ -28,7 +28,14 @@ public class OrderService : IOrderService
 
     public async Task<OrderDto> CreateOrderAsync(CreateOrderDto dto, int? userId)
     {
-        var paymentRef = $"AH-C{Random.Shared.Next(10000, 99999)}";
+        // Unique reference so payments can be matched automatically
+        string paymentRef;
+        var attempts = 0;
+        do
+        {
+            paymentRef = $"AH-C{Random.Shared.Next(10000, 100000)}";
+            if (++attempts > 50) throw new InvalidOperationException("Couldn't generate a unique payment reference.");
+        } while (await _context.Orders.AnyAsync(o => o.PaymentReference == paymentRef));
         var orderNumber = $"ORD-{DateTime.UtcNow:MMdd}-{Random.Shared.Next(100, 999)}";
 
         var orderItems = new List<OrderItem>();

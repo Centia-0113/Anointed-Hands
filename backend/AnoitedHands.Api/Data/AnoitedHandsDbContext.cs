@@ -48,6 +48,9 @@ public class AnoitedHandsDbContext : DbContext
 
         modelBuilder.Entity<AppSetting>().HasKey(s => s.Key);
         modelBuilder.Entity<SpecialDay>().HasIndex(d => d.Date).IsUnique();
+        modelBuilder.Entity<Payment>().HasIndex(p => new { p.Provider, p.ProviderTransactionId });
+        modelBuilder.Entity<Booking>().HasIndex(b => b.PaymentReference);
+        modelBuilder.Entity<Order>().HasIndex(o => o.PaymentReference);
         modelBuilder.Entity<Booking>().HasIndex(b => new { b.Status, b.DepositDueAt });
         modelBuilder.Entity<Booking>().HasIndex(b => new { b.StylistId, b.BookingDateTime });
         modelBuilder.Entity<User>().HasIndex(u => u.StylistId);

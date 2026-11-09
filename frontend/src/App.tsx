@@ -19,6 +19,7 @@ import { OrderPage } from "./pages/OrderPage";
 import { LoginPage } from "./pages/LoginPage";
 import { AccountPage } from "./pages/AccountPage";
 import { ForgotPasswordPage, ResetPasswordPage, VerifyEmailPage } from "./pages/PasswordPages";
+import { PayPage, PaymentCancelPage, PaymentReturnPage } from "./pages/PaymentPages";
 
 // Staff
 import { StaffPage } from "./pages/StaffPage";
@@ -26,6 +27,7 @@ import { StaffPage } from "./pages/StaffPage";
 // Back office (admin)
 import { AdminOperations } from "./pages/AdminDashboard";
 import { AdminAccountPage, AdminContentPage } from "./pages/admin/AdminContentPage";
+import { AdminPaymentsPage } from "./pages/admin/AdminPaymentsPage";
 import {
   AdminCafeQrPage,
   AdminGalleryPage,
@@ -62,6 +64,10 @@ function App() {
               <Route path="/booking" element={<ClientsOnly what="Booking appointments"><BookingPage /></ClientsOnly>} />
               <Route path="/order" element={<ClientsOnly what="Ordering from the café"><OrderPage /></ClientsOnly>} />
 
+              <Route path="/pay/:reference" element={<PayPage />} />
+              <Route path="/payment/return" element={<PaymentReturnPage />} />
+              <Route path="/payment/cancel" element={<PaymentCancelPage />} />
+
               <Route path="/login" element={<LoginPage />} />
               <Route path="/forgot-password" element={<ForgotPasswordPage />} />
               <Route path="/reset-password" element={<ResetPasswordPage />} />
@@ -96,6 +102,7 @@ function App() {
               <Route index element={<AdminOperations view="overview" />} />
               <Route path="bookings" element={<AdminOperations view="bookings" />} />
               <Route path="orders" element={<AdminOperations view="orders" />} />
+              <Route path="payments" element={<AdminPaymentsPage />} />
               <Route path="reports" element={<AdminReportsPage />} />
               <Route path="services" element={<AdminServicesPage />} />
               <Route path="staff" element={<AdminStaffPage />} />

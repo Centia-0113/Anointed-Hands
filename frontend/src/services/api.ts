@@ -325,4 +325,90 @@ export const siteApi = {
   save: async (data: SiteSettings): Promise<SiteSettings> => (await api.put("/site", data)).data,
 };
 
+// Payments: PayFast checkout and bank statement matching
+export interface PayFastSettingsView {
+  enabled: boolean;
+  sandbox: boolean;
+  merchantId: string;
+  hasMerchantKey: boolean;
+  hasPassphrase: boolean;
+  siteUrl: string;
+  apiUrl: string;
+  notifyUrl: string;
+  publiclyReachable: boolean;
+}
+
+export interface StatementMatch {
+  line: number;
+  date?: string | null;
+  description: string;
+  reference: string;
+  amount: number;
+  type?: string | null;
+  targetId?: number | null;
+  customer?: string | null;
+  action: string;
+  message: string;
+  applied: boolean;
+}
+
+export interface PaymentRecord {
+  id: number;
+  paymentReference: string;
+  amount: number;
+  type: string;
+  relatedId: number;
+  status: string;
+  paymentDateTime: string;
+  notes?: string | null;
+  provider: string;
+  createdAt: string;
+}
+
+export const paymentsApi = {
+  methods: async (): Promise<{ payFast: boolean; sandbox: boolean }> => (await api.get("/payments/methods")).data,
+  payable: async (reference: string): Promise<{ reference: string; kind: string; amount: number; description: string }> =>
+    (await api.get(`/payments/payable/${encodeURIComponent(reference)}`)).data,
+  checkout: async (
+    reference: string
+  ): Promise<{ processUrl: string; fields: { name: string; value: string }[]; amount: number; description: string; sandbox: boolean }> =>
+    (await api.post(`/payments/payfast/checkout/${encodeURIComponent(reference)}`)).data,
+  status: async (reference: string): Promise<{ reference: string; type: string; status: string; depositPaid: boolean; paidInFull: boolean }> =>
+    (await api.get(`/payments/status/${encodeURIComponent(reference)}`)).data,
+  // admin
+  getPayFast: async (): Promise<PayFastSettingsView> => (await api.get("/payments/payfast/settings")).data,
+  savePayFast: async (data: {
+    enabled: boolean;
+    sandbox: boolean;
+    merchantId: string;
+    merchantKey?: string;
+    passphrase?: string;
+    clearPassphrase?: boolean;
+    siteUrl: string;
+    apiUrl: string;
+  }): Promise<PayFastSettingsView> => (await api.put("/payments/payfast/settings", data)).data,
+  importStatement: async (file: File, apply: boolean): Promise<{ rowsRead: number; rowsWithReference: number; applied: boolean; matches: StatementMatch[] }> => {
+    const form = new FormData();
+    form.append("file", file);
+    return (await api.post(`/payments/statement?apply=${apply}`, form, { headers: { "Content-Type": "multipart/form-data" } })).data;
+  },
+  recent: async (): Promise<PaymentRecord[]> => (await api.get("/payments/recent")).data,
+};
+
+/** Sends the browser to PayFast by posting the signed checkout form. */
+export const redirectToPayFast = (processUrl: string, fields: { name: string; value: string }[]) => {
+  const form = document.createElement("form");
+  form.method = "POST";
+  form.action = processUrl;
+  fields.forEach((f) => {
+    const input = document.createElement("input");
+    input.type = "hidden";
+    input.name = f.name;
+    input.value = f.value;
+    form.appendChild(input);
+  });
+  document.body.appendChild(form);
+  form.submit();
+};
+
 export default api;

@@ -10,6 +10,7 @@ const sections: { title: string; links: { to: string; label: string; icon: strin
       { to: "/admin", label: "Overview", icon: "✨" },
       { to: "/admin/bookings", label: "Bookings", icon: "📅" },
       { to: "/admin/orders", label: "Café Orders", icon: "☕" },
+      { to: "/admin/payments", label: "Payments", icon: "💳" },
       { to: "/admin/reports", label: "Concerns & Lost Items", icon: "💬" },
     ],
   },

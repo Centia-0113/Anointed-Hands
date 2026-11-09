@@ -74,7 +74,7 @@ public class BookingService : IBookingService
             ServiceId = dto.ServiceId,
             StylistId = dto.StylistId,
             BookingDateTime = dto.BookingDateTime,
-            PaymentReference = $"AH-B{Random.Shared.Next(10000, 99999)}",
+            PaymentReference = await UniqueReferenceAsync(),
             Notes = dto.Notes,
             UserId = userId,
             Price = price,
@@ -91,6 +91,17 @@ public class BookingService : IBookingService
 
         if (deposit > 0) await SendDepositEmailAsync(booking, site);
         return MapToDto(booking);
+    }
+
+    /// <summary>A booking reference (AH-B + 5 digits) not used by any other booking.</summary>
+    private async Task<string> UniqueReferenceAsync()
+    {
+        for (var i = 0; i < 50; i++)
+        {
+            var candidate = $"AH-B{Random.Shared.Next(10000, 100000)}";
+            if (!await _context.Bookings.AnyAsync(b => b.PaymentReference == candidate)) return candidate;
+        }
+        throw new InvalidOperationException("Couldn't generate a unique payment reference.");
     }
 
     private async Task SendDepositEmailAsync(Booking b, SiteSettings s)

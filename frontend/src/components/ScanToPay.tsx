@@ -2,11 +2,14 @@ import React, { useEffect, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import toast from "react-hot-toast";
 import { PaymentInfo } from "../types";
-import { settingsApi } from "../services/api";
+import { paymentsApi, settingsApi } from "../services/api";
+import { Link } from "react-router-dom";
 import { formatRand } from "../utils/format";
 
 let cachedInfo: Promise<PaymentInfo> | null = null;
 const loadPaymentInfo = () => (cachedInfo ??= settingsApi.getPayment());
+let cachedMethods: Promise<{ payFast: boolean }> | null = null;
+const loadMethods = () => (cachedMethods ??= paymentsApi.methods().catch(() => ({ payFast: false, sandbox: false })));
 
 /**
  * What the QR code contains. When a scan-to-pay link template is configured (SnapScan, Zapper,
@@ -39,6 +42,7 @@ interface Props {
 
 export const ScanToPay: React.FC<Props> = ({ reference, amount, compact }) => {
   const [info, setInfo] = useState<PaymentInfo | null>(null);
+  const [payFast, setPayFast] = useState(false);
 
   useEffect(() => {
     loadPaymentInfo()
@@ -46,6 +50,7 @@ export const ScanToPay: React.FC<Props> = ({ reference, amount, compact }) => {
       .catch(() => {
         cachedInfo = null;
       });
+    loadMethods().then((m) => setPayFast(m.payFast));
   }, []);
 
   const copy = async (text: string, label: string) => {
@@ -59,8 +64,10 @@ export const ScanToPay: React.FC<Props> = ({ reference, amount, compact }) => {
 
   if (!info) return <p className="text-sm text-blush-900/60">Loading payment details…</p>;
 
-  const isLink = !!info.scanToPayUrlTemplate;
-  const payload = qrPayload(info, reference, amount);
+  // PayFast: the QR opens our pay page, which goes to PayFast and confirms the booking automatically
+  const payPage = `${window.location.origin}/pay/${encodeURIComponent(reference)}`;
+  const isLink = payFast || !!info.scanToPayUrlTemplate;
+  const payload = payFast ? payPage : qrPayload(info, reference, amount);
 
   return (
     <div className={`rounded-xl bg-white border border-gold-200 ${compact ? "p-4" : "p-6"} text-left`}>
@@ -71,9 +78,11 @@ export const ScanToPay: React.FC<Props> = ({ reference, amount, compact }) => {
         <div className="flex-1 min-w-0 w-full">
           <p className="font-elegant text-2xl font-bold text-blush-700 mb-1">Scan to Pay</p>
           <p className="text-sm text-blush-900/70 mb-3">
-            {isLink
+            {payFast
+              ? "Scan with your phone camera to pay instantly with PayFast – your booking updates automatically."
+              : isLink
               ? "Scan with your phone camera or banking app to pay instantly."
-              : "Scan with your phone to get our EFT details, then pay from your banking app."}
+              : "Scan with your phone to get our EFT details, then pay from your banking app using the reference."}
           </p>
           <dl className="text-sm grid grid-cols-[auto,1fr] gap-x-3 gap-y-1">
             <dt className="text-blush-900/60">Amount</dt>
@@ -101,10 +110,19 @@ export const ScanToPay: React.FC<Props> = ({ reference, amount, compact }) => {
               </>
             )}
           </dl>
-          {isLink && (
-            <a href={payload} target="_blank" rel="noopener noreferrer" className="btn-primary text-sm mt-4">
-              Pay on this device
-            </a>
+          {payFast ? (
+            <Link to={`/pay/${encodeURIComponent(reference)}`} className="btn-primary text-sm mt-4">
+              Pay now with PayFast
+            </Link>
+          ) : (
+            isLink && (
+              <a href={payload} target="_blank" rel="noopener noreferrer" className="btn-primary text-sm mt-4">
+                Pay on this device
+              </a>
+            )
+          )}
+          {!isLink && (
+            <p className="text-xs text-blush-900/60 mt-3">Use the exact reference – we match payments to bookings automatically.</p>
           )}
         </div>
       </div>

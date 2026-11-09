@@ -132,6 +132,19 @@ dotnet user-secrets set "Smtp:From" "you@gmail.com"
   ordering for that browser tab for 4 hours. *Change Code* invalidates old signs.
 - **Facials** include eyebrow shaping, brow tint & shape, classic lash extensions and lash lift & tint.
 
+## 💳 Automatic Payment Confirmation (*Back Office → Payments*)
+
+- **PayFast** - enter your merchant ID, merchant key and passphrase (stored in the database, never returned to the browser) and
+  tick *Accept payments with PayFast*. Clients pay deposits, balances and cafe orders via `/pay/<reference>` (also what the
+  scan-to-pay QR opens). PayFast's ITN posts to `/api/payments/payfast/notify`; the API checks the signature, the merchant id,
+  that the request came from PayFast's servers and that PayFast confirms it, then marks the booking/order paid. Repeated
+  notifications are ignored. **The API must be reachable on a public HTTPS address** for PayFast to send notifications - set it
+  under *Booking system (API) address*. Use *Test mode* with your PayFast sandbox account first.
+- **Bank statement upload** - for normal EFTs: upload your bank's CSV statement, review the preview, then *Apply*. References are
+  found anywhere on a line (`AH-B12345`, `ahb12345`, `AH B12345`), the credit/amount column is used (not the balance), and
+  re-uploading a statement never counts a payment twice.
+- Payment references are unique per booking/order so they can be matched safely.
+
 ## 🗂️ Site Structure
 
 | Area | Who | What |
