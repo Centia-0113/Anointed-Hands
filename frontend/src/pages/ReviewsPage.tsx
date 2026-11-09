@@ -8,7 +8,8 @@ import { apiErrorMessage } from "../utils/format";
 import { StarPicker, Stars } from "../components/StarRating";
 
 export const ReviewsPage: React.FC = () => {
-  const { user, isAdmin } = useAuth();
+  const { user } = useAuth();
+  const isStaff = !!user && user.role !== "Customer";
   const [summary, setSummary] = useState<ReviewSummary | null>(null);
   const [services, setServices] = useState<Service[]>([]);
   const [filter, setFilter] = useState<string>("");
@@ -92,9 +93,10 @@ export const ReviewsPage: React.FC = () => {
                     Sign In
                   </Link>
                 </div>
-              ) : isAdmin ? (
+              ) : isStaff ? (
                 <p className="text-blush-900/70">
-                  Reviews are written by clients. Moderate them from the admin dashboard.
+                  Reviews are written by clients.
+                  {user?.role === "Admin" ? " You can publish or hide them in the Back Office under Reviews." : ""}
                 </p>
               ) : (
                 <form onSubmit={submit} className="space-y-4">

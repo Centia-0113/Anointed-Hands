@@ -11,28 +11,28 @@ namespace AnoitedHands.Api.Controllers;
 [Route("api/[controller]")]
 public class SettingsController : ControllerBase
 {
-    private readonly IConfiguration _config;
+    private readonly ISiteSettingsService _site;
     private readonly ISalonCodeService _salonCode;
 
-    public SettingsController(IConfiguration config, ISalonCodeService salonCode)
+    public SettingsController(ISiteSettingsService site, ISalonCodeService salonCode)
     {
-        _config = config;
+        _site = site;
         _salonCode = salonCode;
     }
 
     /// <summary>Banking details and optional scan-to-pay link template shown with payment QR codes.</summary>
     [HttpGet("payment")]
-    public ActionResult<PaymentInfoDto> GetPaymentInfo()
+    public async Task<ActionResult<PaymentInfoDto>> GetPaymentInfo()
     {
-        var c = _config.GetSection("CompanySettings");
+        var s = await _site.GetAsync();
         return Ok(new PaymentInfoDto
         {
-            BusinessName = c["Name"] ?? "Anointed Hands",
-            BankName = c["BankName"] ?? "",
-            AccountName = c["AccountName"] ?? c["Name"] ?? "",
-            AccountNumber = c["BankAccount"] ?? "",
-            BranchCode = c["BranchCode"] ?? "",
-            ScanToPayUrlTemplate = string.IsNullOrWhiteSpace(c["ScanToPayUrl"]) ? null : c["ScanToPayUrl"],
+            BusinessName = s.BusinessName,
+            BankName = s.BankName,
+            AccountName = s.AccountName,
+            AccountNumber = s.AccountNumber,
+            BranchCode = s.BranchCode,
+            ScanToPayUrlTemplate = string.IsNullOrWhiteSpace(s.ScanToPayUrl) ? null : s.ScanToPayUrl,
         });
     }
 

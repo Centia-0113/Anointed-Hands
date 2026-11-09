@@ -72,6 +72,8 @@ public class BookingsController : ControllerBase
     [HttpPost]
     public async Task<ActionResult<BookingDto>> CreateBooking([FromBody] CreateBookingDto dto)
     {
+        if (User.IsInRole(Roles.Admin) || User.IsInRole(Roles.Stylist))
+            return StatusCode(StatusCodes.Status403Forbidden, new { message = "Staff and admin accounts can't make bookings. Please book with a client account." });
         if (string.IsNullOrWhiteSpace(dto.CustomerName) || string.IsNullOrWhiteSpace(dto.CustomerEmail) || !dto.CustomerEmail.Contains('@'))
             return BadRequest(new { message = "Name and a valid email are required." });
         if (dto.BookingDateTime <= DateTime.Now)

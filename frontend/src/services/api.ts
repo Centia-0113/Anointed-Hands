@@ -20,6 +20,7 @@ import {
   DayHours,
   SpecialDay,
   StaffClient,
+  SiteSettings,
 } from "../types";
 
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000/api";
@@ -316,6 +317,12 @@ export const scheduleApi = {
 export const staffApi = {
   getBookings: async (): Promise<Booking[]> => (await api.get("/staff/bookings")).data,
   getClients: async (): Promise<StaffClient[]> => (await api.get("/staff/clients")).data,
+};
+
+// Website content & business settings
+export const siteApi = {
+  get: async (): Promise<SiteSettings> => (await api.get("/site")).data,
+  save: async (data: SiteSettings): Promise<SiteSettings> => (await api.put("/site", data)).data,
 };
 
 export default api;

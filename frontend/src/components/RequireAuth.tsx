@@ -6,7 +6,7 @@ import { ChangePasswordForm } from "./ChangePasswordForm";
 interface Props {
   children: React.ReactElement;
   /** When set, only users with this role may see the page. */
-  role?: "Admin" | "Stylist";
+  role?: "Admin" | "Stylist" | "Customer";
 }
 
 /** Where each kind of user lands after signing in. */
@@ -46,6 +46,11 @@ export const RequireAuth: React.FC<Props> = ({ children, role }) => {
         </div>
       </div>
     );
+  }
+
+  // Client pages (e.g. My Bookings): staff go to their own area instead
+  if (role === "Customer" && user.role !== "Customer") {
+    return <Navigate to={homeFor(user.role)} replace />;
   }
 
   if (role && user.role !== role) {

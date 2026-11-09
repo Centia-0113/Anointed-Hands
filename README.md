@@ -132,6 +132,24 @@ dotnet user-secrets set "Smtp:From" "you@gmail.com"
   ordering for that browser tab for 4 hours. *Change Code* invalidates old signs.
 - **Facials** include eyebrow shaping, brow tint & shape, classic lash extensions and lash lift & tint.
 
+## 🗂️ Site Structure
+
+| Area | Who | What |
+|------|-----|------|
+| Public website (`/`, `/services`, `/gallery`, `/cafe`, `/reviews`, `/help`) | Everyone | Browse, read reviews, report concerns |
+| `/booking`, `/order`, `/account` | Clients (and guests for booking) | Book, order in the salon, see history, write reviews |
+| `/staff` | Stylists | Their own schedule and clients |
+| `/admin/*` - **Back Office** | Admin | Run the business: bookings & payments, orders, services & prices, staff, hours, website content, gallery, reviews, reports |
+
+Admin and staff accounts **cannot book, order or write reviews** (blocked by the API, hidden on the site); the admin's job is
+managing operations.
+
+### Editing the website without code (*Back Office → Website Content*)
+Business name & tagline, contact details, address, WhatsApp / Instagram / Facebook, homepage heading, introduction and
+"About us", an announcement banner, bank details for scan-to-pay, the deposit % and deadline, and the cancellation policy.
+Weekly opening hours are under *Back Office → Opening Hours*. Changes go live as soon as they're saved.
+`CompanySettings` in `appsettings.json` is only used to pre-fill these on first run.
+
 ## 🧾 Management, Deposits & Staff
 
 - **Services & Menu** (*Admin → Services & Menu*) - add, edit and hide services and cafe items, change prices and durations,
@@ -139,8 +157,8 @@ dotnet user-secrets set "Smtp:From" "you@gmail.com"
   bookings and orders are charged the discounted price, and existing bookings keep the price they were booked at.
 - **Opening hours** (*Admin → Opening Hours*) - open a Sunday with custom hours, close a day (e.g. public holiday) or change one
   day's hours. Days with active bookings can't be closed.
-- **10% refundable deposit** - every booking starts as *Awaiting Deposit*: 10% of the price (rounded up to the rand), due within
-  24 hours (or before the appointment if sooner), with a scan-to-pay QR. A background job releases unpaid bookings (*Expired*) every
+- **Refundable deposit** (default 10%, due within 24 hours - both editable in Website Content) - every booking starts as
+  *Awaiting Deposit*: the deposit is rounded up to the rand and due by the deadline (or before the appointment if sooner), with a scan-to-pay QR. A background job releases unpaid bookings (*Expired*) every
   5 minutes and emails the client. The admin marks *Deposit Paid* / *Paid in Full*; cancelling after payment marks a *Refund Due*,
   then *Mark Refunded*. The balance is paid at the appointment (scan-to-pay available in *My Bookings*).
 - **Staff** (*Admin → Staff*) - only the admin can add employees and create their logins (public sign-up only creates client

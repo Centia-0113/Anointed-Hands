@@ -13,19 +13,24 @@ namespace AnoitedHands.Api.Controllers;
 public class ServicesController : ControllerBase
 {
     private readonly AnoitedHandsDbContext _context;
+    private readonly ISiteSettingsService _site;
 
-    public ServicesController(AnoitedHandsDbContext context)
+    public ServicesController(AnoitedHandsDbContext context, ISiteSettingsService site)
     {
         _context = context;
+        _site = site;
     }
+
+    private async Task<int> DepositPercentAsync() => (await _site.GetAsync()).DepositPercent;
 
     /// <summary>Active services (public).</summary>
     [HttpGet]
     public async Task<ActionResult<IEnumerable<ServiceDto>>> GetServices()
     {
         var services = await _context.Services.Where(s => s.IsActive).ToListAsync();
+        var pct = await DepositPercentAsync();
         // Sorted in memory: SQLite can't ORDER BY decimal columns
-        return Ok(services.OrderBy(s => s.Category).ThenBy(s => s.Price).Select(ToDto));
+        return Ok(services.OrderBy(s => s.Category).ThenBy(s => s.Price).Select(s => ToDto(s, pct)));
     }
 
     /// <summary>All services including hidden ones (admin).</summary>
@@ -34,14 +39,15 @@ public class ServicesController : ControllerBase
     public async Task<ActionResult<IEnumerable<ServiceDto>>> GetAll()
     {
         var services = await _context.Services.OrderBy(s => s.Category).ThenBy(s => s.Name).ToListAsync();
-        return Ok(services.Select(ToDto));
+        var pct = await DepositPercentAsync();
+        return Ok(services.Select(s => ToDto(s, pct)));
     }
 
     [HttpGet("{id}")]
     public async Task<ActionResult<ServiceDto>> GetService(int id)
     {
         var service = await _context.Services.FindAsync(id);
-        return service == null ? NotFound() : Ok(ToDto(service));
+        return service == null ? NotFound() : Ok(ToDto(service, await DepositPercentAsync()));
     }
 
     [Authorize(Roles = Roles.Admin)]
@@ -55,7 +61,7 @@ public class ServicesController : ControllerBase
         Apply(service, dto);
         _context.Services.Add(service);
         await _context.SaveChangesAsync();
-        return Ok(ToDto(service));
+        return Ok(ToDto(service, await DepositPercentAsync()));
     }
 
     [Authorize(Roles = Roles.Admin)]
@@ -69,7 +75,7 @@ public class ServicesController : ControllerBase
 
         Apply(service, dto); // existing bookings keep the price they were booked at
         await _context.SaveChangesAsync();
-        return Ok(ToDto(service));
+        return Ok(ToDto(service, await DepositPercentAsync()));
     }
 
     private static string? Validate(SaveServiceDto dto)
@@ -95,7 +101,7 @@ public class ServicesController : ControllerBase
         s.IsActive = dto.IsActive;
     }
 
-    public static ServiceDto ToDto(Service s)
+    public static ServiceDto ToDto(Service s, int depositPercent)
     {
         var final = Pricing.Effective(s.Price, s.DiscountPercent, s.DiscountEndsOn);
         return new ServiceDto
@@ -108,7 +114,7 @@ public class ServicesController : ControllerBase
             DiscountPercent = s.DiscountPercent,
             DiscountEndsOn = s.DiscountEndsOn,
             IsDiscountActive = Pricing.IsDiscountActive(s.DiscountPercent, s.DiscountEndsOn),
-            DepositAmount = Pricing.Deposit(final),
+            DepositAmount = Pricing.Deposit(final, depositPercent),
             DurationMinutes = s.DurationMinutes,
             Category = s.Category,
             ImageUrl = s.ImageUrl,

@@ -822,10 +822,9 @@ export const AdminHours: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className={panel}>
-        <h3 className="text-2xl text-gold-300 mb-1">Standard Hours</h3>
-        <p className="text-blush-100">Mon – Fri 9:00 – 18:00 · Sat 10:00 – 17:00 · Sun closed</p>
-        <p className="text-xs text-blush-200/70 mt-1">Add a special day below to open on a Sunday, close for a public holiday, or change one day's hours.</p>
+      <div>
+        <h2 className="text-2xl text-gold-300 mb-1">Special Days</h2>
+        <p className="text-sm text-blush-200/80">Open on a Sunday, close for a public holiday, or change one day's hours. These override the weekly hours.</p>
       </div>
 
       <form onSubmit={save} className={`${panel} grid grid-cols-1 md:grid-cols-5 gap-4 items-end`}>

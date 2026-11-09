@@ -1,83 +1,117 @@
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
 
-// Layout
-import { Header, Footer } from "./components/Layout";
+// Layouts
+import { PublicLayout } from "./components/Layout";
+import { AdminLayout } from "./components/AdminLayout";
 
-// Pages
+// Public website
 import { HomePage } from "./pages/HomePage";
 import { ServicesPage } from "./pages/ServicesPage";
+import { GalleryPage } from "./pages/GalleryPage";
 import { CafePage } from "./pages/CafePage";
+import { ReviewsPage } from "./pages/ReviewsPage";
+import { HelpPage } from "./pages/HelpPage";
+
+// Client actions & accounts
 import { BookingPage } from "./pages/BookingPage";
 import { OrderPage } from "./pages/OrderPage";
-import { AdminDashboard } from "./pages/AdminDashboard";
 import { LoginPage } from "./pages/LoginPage";
 import { AccountPage } from "./pages/AccountPage";
 import { ForgotPasswordPage, ResetPasswordPage, VerifyEmailPage } from "./pages/PasswordPages";
-import { GalleryPage } from "./pages/GalleryPage";
-import { ReviewsPage } from "./pages/ReviewsPage";
-import { HelpPage } from "./pages/HelpPage";
+
+// Staff
 import { StaffPage } from "./pages/StaffPage";
 
-// Auth
-import { AuthProvider } from "./context/AuthContext";
-import { RequireAuth } from "./components/RequireAuth";
+// Back office (admin)
+import { AdminOperations } from "./pages/AdminDashboard";
+import { AdminAccountPage, AdminContentPage } from "./pages/admin/AdminContentPage";
+import {
+  AdminCafeQrPage,
+  AdminGalleryPage,
+  AdminHoursPage,
+  AdminReportsPage,
+  AdminReviewsPage,
+  AdminServicesPage,
+  AdminStaffPage,
+} from "./pages/admin/AdminPages";
 
-// Styles
+// Context & guards
+import { AuthProvider } from "./context/AuthContext";
+import { SiteProvider } from "./context/SiteContext";
+import { RequireAuth } from "./components/RequireAuth";
+import { ClientsOnly } from "./components/ClientsOnly";
+
 import "./styles/global.css";
 
 function App() {
   return (
     <Router>
-      <AuthProvider>
-      <div className="flex flex-col min-h-screen">
-        <Header
-          title="Anointed Hands"
-          logoUrl="/assets/images/logo.png"
-        />
-        <main className="flex-1">
+      <SiteProvider>
+        <AuthProvider>
           <Routes>
-            <Route path="/" element={<HomePage />} />
-            <Route path="/services" element={<ServicesPage />} />
-            <Route path="/cafe" element={<CafePage />} />
-            <Route path="/booking" element={<BookingPage />} />
-            <Route path="/order" element={<OrderPage />} />
-            <Route path="/gallery" element={<GalleryPage />} />
-            <Route path="/reviews" element={<ReviewsPage />} />
-            <Route path="/help" element={<HelpPage />} />
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-            <Route path="/reset-password" element={<ResetPasswordPage />} />
-            <Route path="/verify-email" element={<VerifyEmailPage />} />
-            <Route
-              path="/account"
-              element={
-                <RequireAuth>
-                  <AccountPage />
-                </RequireAuth>
-              }
-            />
-            <Route
-              path="/staff"
-              element={
-                <RequireAuth role="Stylist">
-                  <StaffPage />
-                </RequireAuth>
-              }
-            />
+            {/* Public website, client accounts and the staff schedule */}
+            <Route element={<PublicLayout />}>
+              <Route path="/" element={<HomePage />} />
+              <Route path="/services" element={<ServicesPage />} />
+              <Route path="/gallery" element={<GalleryPage />} />
+              <Route path="/cafe" element={<CafePage />} />
+              <Route path="/reviews" element={<ReviewsPage />} />
+              <Route path="/help" element={<HelpPage />} />
+
+              <Route path="/booking" element={<ClientsOnly what="Booking appointments"><BookingPage /></ClientsOnly>} />
+              <Route path="/order" element={<ClientsOnly what="Ordering from the café"><OrderPage /></ClientsOnly>} />
+
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+              <Route path="/reset-password" element={<ResetPasswordPage />} />
+              <Route path="/verify-email" element={<VerifyEmailPage />} />
+              <Route
+                path="/account"
+                element={
+                  <RequireAuth role="Customer">
+                    <AccountPage />
+                  </RequireAuth>
+                }
+              />
+              <Route
+                path="/staff"
+                element={
+                  <RequireAuth role="Stylist">
+                    <StaffPage />
+                  </RequireAuth>
+                }
+              />
+            </Route>
+
+            {/* Back office: managing the business without touching code */}
             <Route
               path="/admin"
               element={
                 <RequireAuth role="Admin">
-                  <AdminDashboard />
+                  <AdminLayout />
                 </RequireAuth>
               }
-            />
+            >
+              <Route index element={<AdminOperations view="overview" />} />
+              <Route path="bookings" element={<AdminOperations view="bookings" />} />
+              <Route path="orders" element={<AdminOperations view="orders" />} />
+              <Route path="reports" element={<AdminReportsPage />} />
+              <Route path="services" element={<AdminServicesPage />} />
+              <Route path="staff" element={<AdminStaffPage />} />
+              <Route path="hours" element={<AdminHoursPage />} />
+              <Route path="cafe-qr" element={<AdminCafeQrPage />} />
+              <Route path="content" element={<AdminContentPage />} />
+              <Route path="gallery" element={<AdminGalleryPage />} />
+              <Route path="reviews" element={<AdminReviewsPage />} />
+              <Route path="account" element={<AdminAccountPage />} />
+              <Route path="*" element={<Navigate to="/admin" replace />} />
+            </Route>
+
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
-        </main>
-        <Footer />
-      </div>
-      </AuthProvider>
+        </AuthProvider>
+      </SiteProvider>
       <Toaster
         position="bottom-right"
         toastOptions={{

@@ -5,6 +5,7 @@ import { servicesApi, stylistsApi, bookingsApi, scheduleApi } from "../services/
 import toast from "react-hot-toast";
 import { apiErrorMessage, formatRand } from "../utils/format";
 import { useAuth } from "../context/AuthContext";
+import { summariseHours, useSite } from "../context/SiteContext";
 import { ScanToPay } from "../components/ScanToPay";
 import { Price } from "../components/Price";
 
@@ -24,6 +25,8 @@ const formatSlot = (slot: string) =>
 export const BookingPage: React.FC = () => {
   const [searchParams] = useSearchParams();
   const { user } = useAuth();
+  const { site } = useSite();
+  const hoursSummary = summariseHours(site.hours).map((h) => `${h.days} ${h.time}`).join(" · ");
   const [services, setServices] = useState<Service[]>([]);
   const [stylists, setStylists] = useState<Stylist[]>([]);
   const [availableSlots, setAvailableSlots] = useState<string[]>([]);
@@ -144,7 +147,7 @@ export const BookingPage: React.FC = () => {
             <div className="mx-auto mb-4 h-16 w-16 rounded-full flex items-center justify-center text-3xl text-white bg-gradient-to-br from-gold-300 to-gold-600">
               ✓
             </div>
-            <h1 className="text-4xl mb-2">Booking Received!</h1>
+            <h1 className="text-4xl mb-2">{confirmed.depositAmount > 0 ? "Booking Received!" : "Booking Confirmed!"}</h1>
             <p className="text-blush-900/70 mb-6">
               {confirmed.serviceName} with {confirmed.stylistName} on{" "}
               {new Date(confirmed.bookingDateTime).toLocaleString([], {
@@ -160,22 +163,29 @@ export const BookingPage: React.FC = () => {
                 {confirmed.paymentReference}
               </p>
             </div>
-            <div className="rounded-xl p-5 mb-4 bg-gold-50 border border-gold-300 text-left">
-              <p className="font-bold text-blush-800 mb-1">
-                Pay your {formatRand(confirmed.depositAmount)} deposit to secure this booking
-              </p>
-              <p className="text-sm text-blush-900/80">
-                Due by{" "}
-                <strong>
-                  {new Date(confirmed.depositDueAt).toLocaleString([], { dateStyle: "full", timeStyle: "short" })}
-                </strong>
-                . Unpaid bookings are released automatically. Your deposit is refundable if you cancel, and the balance
-                of {formatRand(confirmed.servicePrice - confirmed.depositAmount)} is paid at your appointment.
-              </p>
-            </div>
-            <div className="mb-6">
-              <ScanToPay reference={confirmed.paymentReference} amount={confirmed.depositAmount} />
-            </div>
+            {confirmed.depositAmount > 0 ? (
+              <>
+                <div className="rounded-xl p-5 mb-4 bg-gold-50 border border-gold-300 text-left">
+                  <p className="font-bold text-blush-800 mb-1">
+                    Pay your {formatRand(confirmed.depositAmount)} deposit to secure this booking
+                  </p>
+                  <p className="text-sm text-blush-900/80">
+                    Due by{" "}
+                    <strong>
+                      {new Date(confirmed.depositDueAt).toLocaleString([], { dateStyle: "full", timeStyle: "short" })}
+                    </strong>
+                    . Unpaid bookings are released automatically. The balance of{" "}
+                    {formatRand(confirmed.servicePrice - confirmed.depositAmount)} is paid at your appointment.
+                  </p>
+                  {site.cancellationPolicy && <p className="text-xs text-blush-900/70 mt-2">{site.cancellationPolicy}</p>}
+                </div>
+                <div className="mb-6">
+                  <ScanToPay reference={confirmed.paymentReference} amount={confirmed.depositAmount} />
+                </div>
+              </>
+            ) : (
+              <p className="mb-6 text-blush-900/80">Your booking is confirmed. Payment of {formatRand(confirmed.servicePrice)} is made at your appointment.</p>
+            )}
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               {user ? (
                 <Link to="/account" className="btn-secondary">
@@ -289,7 +299,7 @@ export const BookingPage: React.FC = () => {
             <p className="text-xs text-blush-900/60 mt-1">
               {dayHours?.isOpen && dayHours.date === bookingDate
                 ? `Open ${dayHours.opens} – ${dayHours.closes}${dayHours.note ? ` · ${dayHours.note}` : ""}`
-                : "Mon – Fri 9AM – 6PM · Sat 10AM – 5PM · Sundays by special opening"}
+                : hoursSummary}
             </p>
             {specialDays.some((d) => !d.isClosed) && (
               <p className="text-xs mt-1 font-bold text-gold-700">
@@ -372,10 +382,11 @@ export const BookingPage: React.FC = () => {
               </div>
             </div>
           )}
-          {selectedService && (
+          {selectedService && selectedService.depositAmount > 0 && (
             <p className="text-sm text-center text-blush-900/70 -mt-4">
-              A refundable <strong>10% deposit of {formatRand(selectedService.depositAmount)}</strong> is due within 24
-              hours to secure your booking. The balance is paid at your appointment.
+              A <strong>{site.depositPercent}% deposit of {formatRand(selectedService.depositAmount)}</strong> is due within{" "}
+              {site.depositHours} hours to secure your booking. The balance is paid at your appointment.
+              {site.cancellationPolicy && <span className="block text-xs mt-1">{site.cancellationPolicy}</span>}
             </p>
           )}
 

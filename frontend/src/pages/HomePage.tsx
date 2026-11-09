@@ -1,5 +1,7 @@
 import React from "react";
 import { Link } from "react-router-dom";
+import { useSite } from "../context/SiteContext";
+import { useAuth } from "../context/AuthContext";
 
 const features = [
   {
@@ -20,6 +22,13 @@ const features = [
 ];
 
 export const HomePage: React.FC = () => {
+  const { site } = useSite();
+  const { user } = useAuth();
+  const isClient = !user || user.role === "Customer";
+  // Highlight the business name in gold if the heading contains it
+  const title = site.heroTitle || `Welcome to ${site.businessName}`;
+  const nameAt = title.indexOf(site.businessName);
+
   return (
     <div>
       {/* Hero */}
@@ -28,27 +37,44 @@ export const HomePage: React.FC = () => {
         <div className="pointer-events-none absolute -bottom-24 -right-16 h-80 w-80 rounded-full bg-gold-200/60 blur-3xl" />
 
         <div className="relative max-w-4xl mx-auto text-center">
-          <p className="uppercase tracking-[0.35em] text-xs font-bold text-gold-600 mb-4">
-            Salon · Spa · Café
-          </p>
+          {site.tagline && (
+            <p className="uppercase tracking-[0.35em] text-xs font-bold text-gold-600 mb-4">{site.tagline}</p>
+          )}
           <h1 className="text-5xl md:text-7xl mb-2 text-blush-800">
-            Welcome to <span className="text-gold-gradient">Anointed Hands</span>
+            {nameAt >= 0 ? (
+              <>
+                {title.slice(0, nameAt)}
+                <span className="text-gold-gradient">{site.businessName}</span>
+                {title.slice(nameAt + site.businessName.length)}
+              </>
+            ) : (
+              title
+            )}
           </h1>
           <div className="gold-rule" />
-          <p className="text-lg md:text-xl text-blush-900/70 mb-10 max-w-2xl mx-auto">
-            Premium salon and café services in one elegant space. Book your appointment,
-            order delicious treats, and experience beauty and wellness like never before.
-          </p>
+          <p className="text-lg md:text-xl text-blush-900/70 mb-10 max-w-2xl mx-auto whitespace-pre-line">{site.heroSubtitle}</p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link to="/booking" className="btn-primary text-lg px-8 py-3.5">
-              Book an Appointment
-            </Link>
+            {isClient && (
+              <Link to="/booking" className="btn-primary text-lg px-8 py-3.5">
+                Book an Appointment
+              </Link>
+            )}
             <Link to="/services" className="btn-secondary text-lg px-8 py-3.5">
               View Services
             </Link>
           </div>
         </div>
       </section>
+
+      {site.aboutText && (
+        <section className="py-14 px-4">
+          <div className="max-w-3xl mx-auto text-center">
+            <h2 className="text-4xl">About Us</h2>
+            <div className="gold-rule mb-6" />
+            <p className="text-lg text-blush-900/80 whitespace-pre-line">{site.aboutText}</p>
+          </div>
+        </section>
+      )}
 
       {/* Features */}
       <section className="py-16 px-4 bg-white/60 border-y border-gold-100">
@@ -74,12 +100,14 @@ export const HomePage: React.FC = () => {
         <div className="max-w-4xl mx-auto rounded-3xl p-10 md:p-14 text-center text-white shadow-soft bg-gradient-to-br from-blush-500 via-blush-600 to-blush-800 ring-1 ring-gold-400">
           <h2 className="text-4xl mb-3 text-white">Ready to Treat Yourself?</h2>
           <p className="text-lg text-blush-100 mb-8">
-            Book today and experience the Anointed Hands difference.
+            Book today and experience the {site.businessName} difference.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link to="/booking" className="btn-gold text-lg px-8 py-3.5">
-              Book Your Appointment
-            </Link>
+            {isClient && (
+              <Link to="/booking" className="btn-gold text-lg px-8 py-3.5">
+                Book Your Appointment
+              </Link>
+            )}
             <Link
               to="/cafe"
               className="inline-flex items-center justify-center px-8 py-3.5 rounded-full font-bold border-2 border-gold-300 text-white hover:bg-white/10 transition-all text-lg"

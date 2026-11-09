@@ -29,13 +29,15 @@ public class BookingService : IBookingService
     private readonly IScheduleService _schedule;
     private readonly IEmailSender _email;
     private readonly IConfiguration _config;
+    private readonly ISiteSettingsService _site;
 
-    public BookingService(AnoitedHandsDbContext context, IScheduleService schedule, IEmailSender email, IConfiguration config)
+    public BookingService(AnoitedHandsDbContext context, IScheduleService schedule, IEmailSender email, IConfiguration config, ISiteSettingsService site)
     {
         _context = context;
         _schedule = schedule;
         _email = email;
         _config = config;
+        _site = site;
     }
 
     // ------------------------------------------------------------------ create
@@ -62,6 +64,8 @@ public class BookingService : IBookingService
             throw new ArgumentException("That time is no longer available. Please choose another slot.");
 
         var price = Pricing.Effective(service.Price, service.DiscountPercent, service.DiscountEndsOn);
+        var site = await _site.GetAsync();
+        var deposit = Pricing.Deposit(price, site.DepositPercent);
         var booking = new Booking
         {
             CustomerName = dto.CustomerName.Trim(),
@@ -74,9 +78,10 @@ public class BookingService : IBookingService
             Notes = dto.Notes,
             UserId = userId,
             Price = price,
-            DepositAmount = Pricing.Deposit(price),
-            DepositDueAt = Pricing.DepositDueAt(DateTime.Now, dto.BookingDateTime),
-            Status = BookingStatuses.AwaitingDeposit,
+            DepositAmount = deposit,
+            DepositDueAt = Pricing.DepositDueAt(DateTime.Now, dto.BookingDateTime, site.DepositHours),
+            // No deposit required (0%) → the booking is secured straight away
+            Status = deposit > 0 ? BookingStatuses.AwaitingDeposit : BookingStatuses.Confirmed,
             Service = service,
             Stylist = stylist,
         };
@@ -84,22 +89,21 @@ public class BookingService : IBookingService
         _context.Bookings.Add(booking);
         await _context.SaveChangesAsync();
 
-        await SendDepositEmailAsync(booking);
+        if (deposit > 0) await SendDepositEmailAsync(booking, site);
         return MapToDto(booking);
     }
 
-    private async Task SendDepositEmailAsync(Booking b)
+    private async Task SendDepositEmailAsync(Booking b, SiteSettings s)
     {
-        var site = (_config["App:FrontendUrl"] ?? "http://localhost:3000").TrimEnd('/');
-        var bank = _config.GetSection("CompanySettings");
+        var url = (_config["App:FrontendUrl"] ?? "http://localhost:3000").TrimEnd('/');
         await _email.SendAsync(b.CustomerEmail, $"Secure your booking - deposit {b.PaymentReference}", EmailSender.Layout(
             "Almost there! Secure your booking",
             $"Thank you for booking {b.Service?.Name} with {b.Stylist?.Name} on {b.BookingDateTime:dddd d MMMM 'at' HH:mm}. " +
-            $"Please pay the refundable 10% deposit of R{b.DepositAmount:0.00} by {b.DepositDueAt:dddd d MMMM HH:mm} to secure your slot. " +
-            $"EFT to {bank["BankName"]}, account {bank["BankAccount"]}, branch {bank["BranchCode"]}, reference {b.PaymentReference}. " +
+            $"Please pay the refundable {s.DepositPercent}% deposit of R{b.DepositAmount:0.00} by {b.DepositDueAt:dddd d MMMM HH:mm} to secure your slot. " +
+            $"EFT to {s.BankName}, account {s.AccountNumber}, branch {s.BranchCode}, reference {b.PaymentReference}. " +
             $"The balance of R{b.Price - b.DepositAmount:0.00} is payable at your appointment.",
-            "Scan to pay / view booking", $"{site}/account",
-            "Unpaid bookings are released automatically when the deadline passes. Your deposit is refunded if you cancel."));
+            "Scan to pay / view booking", $"{url}/account",
+            $"Unpaid bookings are released automatically when the deadline passes. {s.CancellationPolicy}"));
     }
 
     // ------------------------------------------------------------------ queries

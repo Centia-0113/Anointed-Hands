@@ -3,23 +3,24 @@ import { Booking, Order } from "../types";
 import { bookingsApi, ordersApi } from "../services/api";
 import toast from "react-hot-toast";
 import { apiErrorMessage, formatRand } from "../utils/format";
-import { ChangePasswordForm } from "../components/ChangePasswordForm";
-import { useAuth } from "../context/AuthContext";
-import { AdminGallery, AdminReports, AdminReviews, AdminSalonQr } from "../components/AdminPanels";
-import { AdminCatalog, AdminHours, AdminStaff } from "../components/AdminManage";
+import { Link, useSearchParams } from "react-router-dom";
 import { BookingStatusBadge } from "../components/BookingStatusBadge";
-import { RELEASED_STATUSES } from "../types";
+import { AdminPageHeader } from "../components/AdminLayout";
+import { RELEASED_STATUSES, SupportReport } from "../types";
+import { reportsApi } from "../services/api";
 
-type Tab = "bookings" | "orders" | "catalog" | "staff" | "hours" | "reports" | "reviews" | "gallery" | "cafe-qr";
+type View = "overview" | "bookings" | "orders";
+type BookingFilter = "upcoming" | "deposit" | "refunds" | "past" | "all";
 
 const ORDER_STATUSES = ["Received", "Preparing", "Ready", "Completed", "Cancelled"];
 
 const isToday = (iso: string) => new Date(iso).toDateString() === new Date().toDateString();
 
-const StatCard: React.FC<{ label: string; value: string | number; tone: "rose" | "gold" | "blush" | "plum" }> = ({
+const StatCard: React.FC<{ label: string; value: string | number; tone: "rose" | "gold" | "blush" | "plum"; to?: string }> = ({
   label,
   value,
   tone,
+  to,
 }) => {
   const tones = {
     rose: "from-blush-500 to-blush-700 text-white",
@@ -27,29 +28,44 @@ const StatCard: React.FC<{ label: string; value: string | number; tone: "rose" |
     blush: "from-blush-200 to-blush-300 text-blush-900",
     plum: "from-blush-800 to-blush-900 text-gold-200 ring-1 ring-gold-500/40",
   };
-  return (
-    <div className={`rounded-2xl p-6 bg-gradient-to-br shadow-soft ${tones[tone]}`}>
+  const body = (
+    <>
       <p className="text-sm font-bold uppercase tracking-wider opacity-80 mb-2">{label}</p>
       <p className="font-elegant text-4xl font-bold">{value}</p>
-    </div>
+    </>
+  );
+  const cls = `block rounded-2xl p-6 bg-gradient-to-br shadow-soft ${tones[tone]}`;
+  return to ? (
+    <Link to={to} className={`${cls} hover:scale-[1.02] transition-transform`}>
+      {body}
+    </Link>
+  ) : (
+    <div className={cls}>{body}</div>
   );
 };
 
-export const AdminDashboard: React.FC = () => {
+const fmtWhen = (iso: string) => new Date(iso).toLocaleString([], { dateStyle: "medium", timeStyle: "short" });
+
+/** Day-to-day operations: overview, bookings and café orders (one component, three back-office pages). */
+export const AdminOperations: React.FC<{ view: View }> = ({ view }) => {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
-  const [activeTab, setActiveTab] = useState<Tab>("bookings");
-  const [openReports, setOpenReports] = useState<number | null>(null);
+  const [reports, setReports] = useState<SupportReport[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
+  const [params] = useSearchParams();
+  const [bookingFilter, setBookingFilter] = useState<BookingFilter>((params.get("filter") as BookingFilter) || "upcoming");
+  useEffect(() => {
+    const f = params.get("filter") as BookingFilter | null;
+    if (f) setBookingFilter(f);
+  }, [params]);
   const [busyId, setBusyId] = useState<string | null>(null);
-  const [showSettings, setShowSettings] = useState(false);
-  const { user } = useAuth();
 
   const fetchData = useCallback(async () => {
     try {
-      const [b, o] = await Promise.all([bookingsApi.getAll(), ordersApi.getAll()]);
+      const [b, o, r] = await Promise.all([bookingsApi.getAll(), ordersApi.getAll(), reportsApi.getAll()]);
       setBookings(b);
       setOrders(o);
+      setReports(r);
     } catch (error) {
       toast.error(apiErrorMessage(error, "Failed to load data"));
     }
@@ -124,7 +140,33 @@ export const AdminDashboard: React.FC = () => {
     ref.toLowerCase().includes(term) ||
     extra.toLowerCase().includes(term);
 
-  const filteredBookings = bookings.filter((b) => matches(b.customerName, b.paymentReference));
+  const now = new Date();
+  const byFilter = (b: Booking) => {
+    switch (bookingFilter) {
+      case "upcoming":
+        return new Date(b.bookingDateTime) >= now && !RELEASED_STATUSES.includes(b.status);
+      case "deposit":
+        return b.status === "Awaiting Deposit";
+      case "refunds":
+        return b.refundStatus === "Refund Due";
+      case "past":
+        return new Date(b.bookingDateTime) < now || RELEASED_STATUSES.includes(b.status);
+      default:
+        return true;
+    }
+  };
+  const filteredBookings = bookings
+    .filter((b) => matches(b.customerName, b.paymentReference, `${b.customerEmail} ${b.stylistName} ${b.serviceName}`))
+    .filter(byFilter)
+    .sort((a, b) =>
+      bookingFilter === "past" || bookingFilter === "all"
+        ? b.bookingDateTime.localeCompare(a.bookingDateTime)
+        : a.bookingDateTime.localeCompare(b.bookingDateTime)
+    );
+  const todaysAppointments = bookings
+    .filter((b) => isToday(b.bookingDateTime) && !RELEASED_STATUSES.includes(b.status))
+    .sort((a, b) => a.bookingDateTime.localeCompare(b.bookingDateTime));
+  const openReports = reports.filter((r) => r.status !== "Resolved").length;
   const filteredOrders = orders.filter((o) => matches(o.customerName, o.paymentReference, o.orderNumber));
 
   const awaitingDeposits = bookings.filter((b) => b.status === "Awaiting Deposit").length;
@@ -141,93 +183,162 @@ export const AdminDashboard: React.FC = () => {
       return total;
     }, 0);
 
-  const tabClass = (tab: Tab) =>
-    activeTab === tab
-      ? "px-5 py-2.5 rounded-full font-bold text-sm bg-gradient-to-r from-blush-500 to-blush-600 text-white"
-      : "px-5 py-2.5 rounded-full font-bold text-sm bg-white/10 text-blush-100 hover:bg-white/20";
-  const isTable = activeTab === "bookings" || activeTab === "orders";
-
   const th = "px-5 py-3 text-left text-xs font-bold uppercase tracking-wider text-gold-300";
   const td = "px-5 py-3";
+  const chip = (f: BookingFilter, label: string, count?: number) => (
+    <button onClick={() => setBookingFilter(f)} className={bookingFilter === f ? "chip-active" : "chip"}>
+      {label}
+      {count != null ? ` (${count})` : ""}
+    </button>
+  );
 
-  return (
-    <div className="min-h-screen bg-gradient-to-b from-blush-900 to-[#2e0819] text-blush-50 py-12">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex flex-wrap items-start justify-between gap-4 mb-8">
-          <div>
-            <h1 className="text-5xl text-gold-300 mb-1">Admin Dashboard</h1>
-            <p className="text-blush-200">Bookings, café orders and EFT payments at a glance.</p>
-          </div>
-          <button
-            onClick={() => setShowSettings((s) => !s)}
-            className="px-4 py-2 rounded-full text-sm font-bold border border-gold-500/60 text-gold-200 hover:bg-white/10"
-          >
-            {showSettings ? "Close settings" : "Account settings"}
-          </button>
-        </div>
+  if (view === "overview") {
+    const depositsDue = bookings
+      .filter((b) => b.status === "Awaiting Deposit")
+      .sort((a, b) => a.depositDueAt.localeCompare(b.depositDueAt));
+    const refunds = bookings.filter((b) => b.refundStatus === "Refund Due");
+    const panel = "rounded-2xl p-6 bg-white/5 ring-1 ring-gold-500/30";
+    return (
+      <div>
+        <AdminPageHeader title="Overview" subtitle="What needs your attention today." />
 
-        {showSettings && (
-          <div className="mb-10 rounded-2xl p-6 bg-white/5 ring-1 ring-gold-500/30">
-            <h2 className="text-2xl text-gold-300 mb-1">Change Password</h2>
-            <p className="text-sm text-blush-200 mb-5">Signed in as {user?.email}</p>
-            <ChangePasswordForm dark />
-          </div>
-        )}
-
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 mb-10">
-          <StatCard label="Awaiting Deposit" value={awaitingDeposits} tone="rose" />
-          <StatCard label="Refunds Due" value={refundsDue} tone="plum" />
-          <StatCard label="Unpaid Orders" value={unpaidOrders} tone="blush" />
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-8">
+          <StatCard label="Awaiting Deposit" value={awaitingDeposits} tone="rose" to="/admin/bookings?filter=deposit" />
+          <StatCard label="Refunds Due" value={refundsDue} tone="plum" to="/admin/bookings?filter=refunds" />
+          <StatCard label="Unpaid Café Orders" value={unpaidOrders} tone="blush" to="/admin/orders" />
           <StatCard label="Today's Takings" value={formatRand(todaysRevenue)} tone="gold" />
         </div>
 
-        <div className="flex flex-wrap gap-2 mb-6">
-          <button onClick={() => setActiveTab("bookings")} className={tabClass("bookings")}>
-            Bookings ({bookings.length})
-          </button>
-          <button onClick={() => setActiveTab("orders")} className={tabClass("orders")}>
-            Orders ({orders.length})
-          </button>
-          <button onClick={() => setActiveTab("catalog")} className={tabClass("catalog")}>
-            Services &amp; Menu
-          </button>
-          <button onClick={() => setActiveTab("staff")} className={tabClass("staff")}>
-            Staff
-          </button>
-          <button onClick={() => setActiveTab("hours")} className={tabClass("hours")}>
-            Opening Hours
-          </button>
-          <button onClick={() => setActiveTab("reports")} className={tabClass("reports")}>
-            Concerns &amp; Lost Items{openReports ? ` (${openReports})` : ""}
-          </button>
-          <button onClick={() => setActiveTab("reviews")} className={tabClass("reviews")}>
-            Reviews
-          </button>
-          <button onClick={() => setActiveTab("gallery")} className={tabClass("gallery")}>
-            Gallery
-          </button>
-          <button onClick={() => setActiveTab("cafe-qr")} className={tabClass("cafe-qr")}>
-            Café QR
-          </button>
-        </div>
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+          <section className={panel}>
+            <div className="flex justify-between items-baseline mb-4">
+              <h2 className="text-2xl text-gold-300">Today's Appointments</h2>
+              <Link to="/admin/bookings" className="text-sm font-bold text-gold-200 hover:underline">All bookings →</Link>
+            </div>
+            {todaysAppointments.length === 0 ? (
+              <p className="text-blush-200/70">No appointments today.</p>
+            ) : (
+              <ul className="divide-y divide-white/10">
+                {todaysAppointments.map((b) => (
+                  <li key={b.id} className="py-3 flex flex-wrap justify-between gap-2">
+                    <div>
+                      <p className="font-bold">
+                        <span className="font-mono text-gold-200 mr-2">
+                          {new Date(b.bookingDateTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                        </span>
+                        {b.customerName}
+                      </p>
+                      <p className="text-xs text-blush-200/80">{b.serviceName} · {b.stylistName}</p>
+                    </div>
+                    <BookingStatusBadge booking={b} />
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
 
-        {/* Keep the reports panel mounted so the open-count badge stays current */}
-        <div className={activeTab === "reports" ? "" : "hidden"}>
-          <AdminReports onCountChange={setOpenReports} />
-        </div>
-        {activeTab === "catalog" && <AdminCatalog />}
-        {activeTab === "staff" && <AdminStaff />}
-        {activeTab === "hours" && <AdminHours />}
-        {activeTab === "reviews" && <AdminReviews />}
-        {activeTab === "gallery" && <AdminGallery />}
-        {activeTab === "cafe-qr" && <AdminSalonQr />}
+          <section className={panel}>
+            <h2 className="text-2xl text-gold-300 mb-4">Deposits to Check</h2>
+            {depositsDue.length === 0 ? (
+              <p className="text-blush-200/70">No deposits outstanding.</p>
+            ) : (
+              <ul className="divide-y divide-white/10">
+                {depositsDue.slice(0, 6).map((b) => (
+                  <li key={b.id} className="py-3 flex flex-wrap justify-between items-center gap-2">
+                    <div>
+                      <p className="font-bold">{b.customerName} <span className="font-mono text-gold-200 text-xs ml-1">{b.paymentReference}</span></p>
+                      <p className="text-xs text-blush-200/80">
+                        {formatRand(b.depositAmount)} due {fmtWhen(b.depositDueAt)} · {b.serviceName}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => bookingAction(b.id, () => bookingsApi.markDepositPaid(b.id), "Deposit recorded – booking secured")}
+                      disabled={busyId === `booking-${b.id}`}
+                      className="btn-gold text-xs px-3 py-1.5 disabled:opacity-50"
+                    >
+                      Deposit Paid
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {depositsDue.length > 6 && (
+              <Link to="/admin/bookings?filter=deposit" className="block mt-3 text-sm font-bold text-gold-200 hover:underline">
+                See all {depositsDue.length} →
+              </Link>
+            )}
+          </section>
 
-        {isTable && (
-        <>
+          {refunds.length > 0 && (
+            <section className={panel}>
+              <h2 className="text-2xl text-gold-300 mb-4">Refunds to Pay</h2>
+              <ul className="divide-y divide-white/10">
+                {refunds.map((b) => (
+                  <li key={b.id} className="py-3 flex flex-wrap justify-between items-center gap-2">
+                    <div>
+                      <p className="font-bold">{b.customerName}</p>
+                      <p className="text-xs text-blush-200/80">{formatRand(b.amountPaid)} · ref {b.paymentReference} · {b.customerEmail}</p>
+                    </div>
+                    <button
+                      onClick={() =>
+                        bookingAction(b.id, () => bookingsApi.markRefunded(b.id), "Refund recorded",
+                          `Confirm you've refunded ${formatRand(b.amountPaid)} to ${b.customerName}?`)
+                      }
+                      disabled={busyId === `booking-${b.id}`}
+                      className="btn-gold text-xs px-3 py-1.5 disabled:opacity-50"
+                    >
+                      Mark Refunded
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+
+          <section className={panel}>
+            <h2 className="text-2xl text-gold-300 mb-4">Quick Actions</h2>
+            <div className="grid grid-cols-2 gap-3">
+              {[
+                { to: "/admin/content", label: "Edit website text & details", icon: "📝" },
+                { to: "/admin/services", label: "Change prices & discounts", icon: "🏷️" },
+                { to: "/admin/hours", label: "Open a Sunday / change hours", icon: "🗓️" },
+                { to: "/admin/staff", label: "Add an employee", icon: "👩🏾‍💼" },
+                { to: "/admin/reports", label: `Concerns & lost items${openReports ? ` (${openReports} open)` : ""}`, icon: "💬" },
+                { to: "/admin/gallery", label: "Upload gallery photos", icon: "📸" },
+              ].map((a) => (
+                <Link key={a.to} to={a.to} className="rounded-xl p-4 bg-white/5 hover:bg-white/10 ring-1 ring-gold-500/20 text-sm font-bold">
+                  <span className="text-xl mr-2">{a.icon}</span>
+                  {a.label}
+                </Link>
+              ))}
+            </div>
+          </section>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      {view === "bookings" ? (
+        <AdminPageHeader title="Bookings" subtitle="Record deposits and payments, refunds and cancellations." />
+      ) : (
+        <AdminPageHeader title="Café Orders" subtitle="Update order status and record payments." />
+      )}
+
+        {view === "bookings" && (
+          <div className="flex flex-wrap gap-2 mb-4">
+            {chip("upcoming", "Upcoming")}
+            {chip("deposit", "Awaiting deposit", awaitingDeposits)}
+            {chip("refunds", "Refunds due", refundsDue)}
+            {chip("past", "Past & cancelled")}
+            {chip("all", "All", bookings.length)}
+          </div>
+        )}
         <div className="mb-6">
           <input
             type="text"
-            placeholder="Search by name, payment reference or order #…"
+            placeholder={view === "bookings" ? "Search by client, email, reference, stylist or service…" : "Search by name, payment reference or order #…"}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="!bg-white/10 !text-white placeholder-blush-200/60 !border-blush-700 focus:!border-gold-400"
@@ -235,7 +346,7 @@ export const AdminDashboard: React.FC = () => {
         </div>
 
         <div className="rounded-2xl overflow-x-auto bg-white/5 ring-1 ring-gold-500/30">
-          {activeTab === "bookings" ? (
+          {view === "bookings" ? (
             <table className="w-full min-w-[820px]">
               <thead className="bg-white/5">
                 <tr>
@@ -401,9 +512,6 @@ export const AdminDashboard: React.FC = () => {
             </table>
           )}
         </div>
-        </>
-        )}
-      </div>
     </div>
   );
 };

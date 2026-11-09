@@ -99,7 +99,7 @@ public class ScheduleController : ControllerBase
         if (day == null) return NotFound();
 
         // Don't strand bookings made for a special Sunday opening
-        if (!day.IsClosed && OpeningHours.Standard(day.Date) == null)
+        if (!day.IsClosed && !(await _schedule.GetStandardHoursAsync(day.Date)).IsOpen)
         {
             var booked = await _context.Bookings.CountAsync(b => b.BookingDateTime >= day.Date && b.BookingDateTime < day.Date.AddDays(1)
                 && !BookingStatuses.Released.Contains(b.Status));

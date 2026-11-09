@@ -60,6 +60,8 @@ public class ReviewsController : ControllerBase
     [HttpPost]
     public async Task<ActionResult<ReviewDto>> Upsert([FromBody] CreateReviewDto dto)
     {
+        if (User.IsInRole(Roles.Admin) || User.IsInRole(Roles.Stylist))
+            return StatusCode(StatusCodes.Status403Forbidden, new { message = "Reviews can only be written by clients." });
         var userId = User.UserId()!.Value;
         if (dto.Rating is < 1 or > 5)
             return BadRequest(new { message = "Please choose a rating from 1 to 5 stars." });

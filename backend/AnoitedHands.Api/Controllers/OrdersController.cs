@@ -57,6 +57,8 @@ public class OrdersController : ControllerBase
     [HttpPost]
     public async Task<ActionResult<OrderDto>> CreateOrder([FromBody] CreateOrderDto dto)
     {
+        if (User.IsInRole(Roles.Admin) || User.IsInRole(Roles.Stylist))
+            return StatusCode(StatusCodes.Status403Forbidden, new { message = "Staff and admin accounts can't place café orders." });
         if (!await _salonCode.IsValidAsync(dto.SalonCode))
             return StatusCode(StatusCodes.Status403Forbidden, new
             {

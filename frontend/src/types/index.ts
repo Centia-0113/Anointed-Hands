@@ -241,3 +241,35 @@ export interface StaffClient {
   totalSpent: number;
   bookings: Booking[];
 }
+
+export interface WeeklyHours {
+  day: number; // 0 = Sunday … 6 = Saturday
+  isOpen: boolean;
+  opens: string; // "09:00"
+  closes: string;
+}
+
+/** Website content & business settings, editable by the admin under Website Content. */
+export interface SiteSettings {
+  businessName: string;
+  tagline: string;
+  phone: string;
+  email: string;
+  address: string;
+  whatsApp: string;
+  instagram: string;
+  facebook: string;
+  heroTitle: string;
+  heroSubtitle: string;
+  aboutText: string;
+  announcement: string;
+  bankName: string;
+  accountName: string;
+  accountNumber: string;
+  branchCode: string;
+  scanToPayUrl: string;
+  depositPercent: number;
+  depositHours: number;
+  cancellationPolicy: string;
+  hours: WeeklyHours[];
+}

@@ -33,6 +33,8 @@ builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IEmailSender, EmailSender>();
 builder.Services.AddScoped<ISalonCodeService, SalonCodeService>();
+builder.Services.AddMemoryCache();
+builder.Services.AddScoped<ISiteSettingsService, SiteSettingsService>();
 builder.Services.AddScoped<IScheduleService, ScheduleService>();
 builder.Services.AddHostedService<DepositExpiryService>(); // releases bookings with unpaid deposits
 
